@@ -8,7 +8,6 @@ export default function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Ambil user dari localStorage saat pertama load
     useEffect(() => {
         try {
             const savedUser = localStorage.getItem("user");
@@ -16,7 +15,6 @@ export default function App() {
             if (savedUser) {
                 const parsedUser = JSON.parse(savedUser);
 
-                // Jika role tidak valid → hapus
                 if (
                     parsedUser.role === "super_admin" ||
                     parsedUser.role === "admin"
@@ -34,12 +32,12 @@ export default function App() {
         setLoading(false);
     }, []);
 
-    // Simpan user saat login
     const handleSetUser = (userData) => {
         if (
             userData.role === "super_admin" ||
             userData.role === "admin"
         ) {
+            console.log("LOGIN ROLE:", userData.role); // Debug
             setUser(userData);
             localStorage.setItem("user", JSON.stringify(userData));
         } else {
@@ -47,7 +45,6 @@ export default function App() {
         }
     };
 
-    // Logout
     const handleLogout = () => {
         setUser(null);
         localStorage.removeItem("user");
@@ -57,12 +54,10 @@ export default function App() {
         return <div style={{ padding: 40 }}>Loading...</div>;
     }
 
-    // Jika belum login
     if (!user) {
         return <Login setUser={handleSetUser} />;
     }
 
-    // Super Admin
     if (user.role === "super_admin") {
         return (
             <SuperAdminDashboard
@@ -72,7 +67,6 @@ export default function App() {
         );
     }
 
-    // Admin
     if (user.role === "admin") {
         return (
             <AdminDashboard
@@ -82,7 +76,7 @@ export default function App() {
         );
     }
 
-    // Jika role aneh → reset
+    // fallback safety
     handleLogout();
     return <Login setUser={handleSetUser} />;
 }
