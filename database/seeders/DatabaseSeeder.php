@@ -14,10 +14,10 @@ class DatabaseSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'super@admin.com'],
             [
-                'name'   => 'Super Admin',
+                'name'     => 'Super Admin',
                 'password' => Hash::make('123456'),
-                'role'   => 'super_admin',
-                'divisi' => null,
+                'role'     => 'super_admin',
+                'divisi'   => null,
             ]
         );
 
@@ -25,21 +25,21 @@ class DatabaseSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'admin@admin.com'],
             [
-                'name'   => 'Admin',
+                'name'     => 'Admin',
                 'password' => Hash::make('123456'),
-                'role'   => 'admin',
-                'divisi' => null,
+                'role'     => 'admin',
+                'divisi'   => null,
             ]
         );
 
         // ATILA - Service
         User::updateOrCreate(
-            ['email' => 'ATILA@admin.com'],
+            ['email' => 'atila@admin.com'],
             [
-                'name'   => 'ATILA',
+                'name'     => 'ATILA',
                 'password' => Hash::make('123456'),
-                'role'   => 'admin',
-                'divisi' => 'Service',
+                'role'     => 'admin',
+                'divisi'   => 'Service',
             ]
         );
 
@@ -47,10 +47,32 @@ class DatabaseSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'aqila@admin.com'],
             [
-                'name'   => 'Aqila',
+                'name'     => 'Aqila',
                 'password' => Hash::make('123456'),
-                'role'   => 'admin',
-                'divisi' => 'IT',
+                'role'     => 'admin',
+                'divisi'   => 'IT',
+            ]
+        );
+
+        // Yuda - Sales
+        User::updateOrCreate(
+            ['email' => 'yuda@sales.com'],
+            [
+                'name'     => 'Yuda',
+                'password' => Hash::make('123456'),
+                'role'     => 'admin',
+                'divisi'   => 'Sales',
+            ]
+        );
+
+        // Daffa - Kontraktor
+        User::updateOrCreate(
+            ['email' => 'daffa@kontraktor.com'],
+            [
+                'name'     => 'Daffa',
+                'password' => Hash::make('123456'),
+                'role'     => 'admin',
+                'divisi'   => 'Kontraktor',
             ]
         );
     }
