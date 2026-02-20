@@ -20,6 +20,7 @@ import {
   Clock,
   AlertTriangle
 } from "lucide-react";
+import Profile from "./Profile.jsx";
 
 /* IMPORT PAGE */
 import ITPage from "./ITPage";
@@ -32,6 +33,33 @@ const SuperAdminDashboard = ({ user, logout }) => {
   const [openDivisi, setOpenDivisi] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [currentUser, setCurrentUser] = useState(user);
+
+  const handleProfileUpdate = (updatedUser) => {
+    setCurrentUser(updatedUser);
+  };
+
+  // Get photo URL
+  const getPhotoUrl = (photoPath) => {
+    if (!photoPath) return null;
+    if (photoPath.startsWith('http')) return photoPath;
+    return `/storage/${photoPath}`;
+  };
+
+  const photoUrl = getPhotoUrl(currentUser?.profile_photo);
+  const initialLetter = currentUser?.name?.charAt(0);
+
+  /* ================= PROFILE PAGE ================= */
+  if (currentPage === "profile") {
+    return (
+      <Profile
+        user={currentUser}
+        logout={logout}
+        onProfileUpdate={handleProfileUpdate}
+        setCurrentPage={setCurrentPage}
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fb] relative">
@@ -113,7 +141,13 @@ const SuperAdminDashboard = ({ user, logout }) => {
               </div>
             )}
 
-            <SidebarItem icon={<User size={18} />} text="Profile" />
+            <div onClick={() => setCurrentPage("profile")}>
+              <SidebarItem
+                icon={<User size={18} />}
+                text="Profile"
+                active={currentPage === "profile"}
+              />
+            </div>
           </div>
         </div>
 
@@ -135,11 +169,19 @@ const SuperAdminDashboard = ({ user, logout }) => {
           <div className="flex items-center gap-4">
             <Bell size={20} className="text-gray-600" />
             <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-full">
-              <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center">
-                {user?.name?.charAt(0)}
-              </div>
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center">
+                  {initialLetter}
+                </div>
+              )}
               <span className="font-medium hidden sm:block">
-                {user?.name}
+                {currentUser?.name}
               </span>
             </div>
           </div>
