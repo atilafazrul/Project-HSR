@@ -19,13 +19,29 @@ import {
   Server,
   ShieldCheck
 } from "lucide-react";
+import Profile from "./Profile.jsx";
 
 export default function AdminDashboard({ user, logout }) {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [currentUser, setCurrentUser] = useState(user);
 
   const currentDivisi = user?.divisi || "Service";
+
+  const handleProfileUpdate = (updatedUser) => {
+    setCurrentUser(updatedUser);
+  };
+
+  // Get photo URL
+  const getPhotoUrl = (photoPath) => {
+    if (!photoPath) return null;
+    if (photoPath.startsWith('http')) return photoPath;
+    return `/storage/${photoPath}`;
+  };
+
+  const photoUrl = getPhotoUrl(currentUser?.profile_photo);
+  const initialLetter = currentUser?.name?.charAt(0);
 
   /* ================= HELPER ================= */
 
@@ -52,6 +68,18 @@ export default function AdminDashboard({ user, logout }) {
     Kontraktor: <Hammer size={18} />,
     Sales: <BarChart3 size={18} />
   };
+
+  /* ================= PROFILE PAGE ================= */
+  if (currentPage === "profile") {
+    return (
+      <Profile
+        user={currentUser}
+        logout={logout}
+        onProfileUpdate={handleProfileUpdate}
+        setCurrentPage={setCurrentPage}
+      />
+    );
+  }
 
   /* ================= LAYOUT ================= */
 
@@ -100,7 +128,13 @@ export default function AdminDashboard({ user, logout }) {
               </div>
             </div>
 
-            <SidebarItem icon={<User size={18} />} text="Profile" />
+            <div onClick={() => setCurrentPage("profile")}>
+              <SidebarItem
+                icon={<User size={18} />}
+                text="Profile"
+                active={currentPage === "profile"}
+              />
+            </div>
 
           </div>
         </div>
@@ -138,11 +172,19 @@ export default function AdminDashboard({ user, logout }) {
 
           <div className="flex items-center gap-3">
 
-            <div className="bg-blue-600 text-white w-9 h-9 rounded-full flex items-center justify-center">
-              {user?.name?.charAt(0)}
-            </div>
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt="Profile"
+                className="w-9 h-9 rounded-full object-cover"
+              />
+            ) : (
+              <div className="bg-blue-600 text-white w-9 h-9 rounded-full flex items-center justify-center">
+                {initialLetter}
+              </div>
+            )}
 
-            <span>{user?.name}</span>
+            <span>{currentUser?.name}</span>
 
           </div>
 
@@ -155,7 +197,7 @@ export default function AdminDashboard({ user, logout }) {
           {currentPage === "dashboard" && (
             <>
               <h2 className="text-3xl font-bold mb-2">
-                Selamat Datang, {user?.name}
+                Selamat Datang, {currentUser?.name}
               </h2>
 
               <p className="text-gray-500 mb-10">
