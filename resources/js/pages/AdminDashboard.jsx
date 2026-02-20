@@ -25,8 +25,41 @@ export default function AdminDashboard({ user, logout }) {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [currentUser, setCurrentUser] = useState(user);
 
-  const divisi = user?.divisi?.toUpperCase() || "SERVICE";
+  const currentDivisi = user?.divisi || "Service";
+
+  const handleProfileUpdate = (updatedUser) => {
+    setCurrentUser(updatedUser);
+  };
+
+  // Get photo URL
+  const getPhotoUrl = (photoPath) => {
+    if (!photoPath) return null;
+    if (photoPath.startsWith('http')) return photoPath;
+    return `/storage/${photoPath}`;
+  };
+
+  const photoUrl = getPhotoUrl(currentUser?.profile_photo);
+  const initialLetter = currentUser?.name?.charAt(0);
+
+  /* ================= HELPER ================= */
+
+  const getDivisiPage = () => {
+    if (currentDivisi === "IT") return "it";
+    if (currentDivisi === "Service" || currentDivisi === "SERVICE") return "service";
+    if (currentDivisi === "Kontraktor") return "kontraktor";
+    if (currentDivisi === "Sales") return "sales";
+    return "service";
+  };
+
+  const getDivisiImage = () => {
+    if (currentDivisi === "IT") return "/images/it.jpg";
+    if (currentDivisi === "Service" || currentDivisi === "SERVICE") return "/images/service.jpg";
+    if (currentDivisi === "Kontraktor") return "/images/kontraktor.jpg";
+    if (currentDivisi === "Sales") return "/images/sales.jpg";
+    return "/images/service.jpg";
+  };
 
   const icons = {
     IT: <Monitor size={18} />,
@@ -34,6 +67,8 @@ export default function AdminDashboard({ user, logout }) {
     KONTRAKTOR: <Hammer size={18} />,
     SALES: <BarChart3 size={18} />,
   };
+
+  /* ================= LAYOUT ================= */
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]">
@@ -80,7 +115,13 @@ export default function AdminDashboard({ user, logout }) {
 
             </div>
 
-            <SidebarItem icon={<User size={18} />} text="Profile" />
+            <div onClick={() => setCurrentPage("profile")}>
+              <SidebarItem
+                icon={<User size={18} />}
+                text="Profile"
+                active={currentPage === "profile"}
+              />
+            </div>
 
           </div>
 
@@ -114,11 +155,19 @@ export default function AdminDashboard({ user, logout }) {
 
           <div className="flex items-center gap-3">
 
-            <div className="bg-blue-600 w-9 h-9 text-white rounded-full flex justify-center items-center">
-              {user?.name?.charAt(0)}
-            </div>
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt="Profile"
+                className="w-9 h-9 rounded-full object-cover"
+              />
+            ) : (
+              <div className="bg-blue-600 w-9 h-9 text-white rounded-full flex justify-center items-center">
+                {initialLetter}
+              </div>
+            )}
 
-            <span>{user?.name}</span>
+            <span>{currentUser?.name}</span>
 
           </div>
 
@@ -131,7 +180,7 @@ export default function AdminDashboard({ user, logout }) {
           {currentPage === "dashboard" && (
             <>
               <h2 className="text-3xl font-bold mb-2">
-                Dashboard {divisi}
+                Selamat Datang, {currentUser?.name}
               </h2>
 
               <p className="text-gray-500 mb-10">
@@ -219,9 +268,8 @@ export default function AdminDashboard({ user, logout }) {
 
 const SidebarItem = ({ icon, text, active }) => (
   <div
-    className={`flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer ${
-      active ? "bg-blue-600" : "hover:bg-slate-800"
-    }`}
+    className={`flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer ${active ? "bg-blue-600" : "hover:bg-slate-800"
+      }`}
   >
     {icon}
     {text}
