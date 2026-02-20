@@ -1,7 +1,7 @@
 import React from "react";
-import { BarChart3, FileText, History } from "lucide-react";
+import { Hammer, FileText, History } from "lucide-react";
 
-const SalesPage = ({ goBack }) => {
+const KontraktorPage = ({ goBack }) => {
   return (
     <div>
 
@@ -13,31 +13,31 @@ const SalesPage = ({ goBack }) => {
           ← Kembali
         </button>
 
-        <h2 className="text-3xl font-bold">Divisi Sales</h2>
+        <h2 className="text-3xl font-bold">Divisi Kontraktor</h2>
       </div>
 
       <p className="text-gray-500 mb-8">
-        Kelola target, laporan, dan riwayat penjualan
+        Kelola proyek, dokumentasi, dan riwayat kontraktor
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
         <Card
-          icon={<BarChart3 size={30} className="text-blue-600" />}
-          title="Target"
-          desc="Kelola target penjualan"
+          icon={<Hammer size={30} className="text-blue-600" />}
+          title="Proyek"
+          desc="Kelola data proyek"
         />
 
         <Card
           icon={<FileText size={30} className="text-green-600" />}
-          title="Report"
-          desc="Upload laporan penjualan"
+          title="Dokumentasi"
+          desc="Upload laporan proyek"
         />
 
         <Card
           icon={<History size={30} className="text-purple-600" />}
           title="Riwayat"
-          desc="Histori transaksi"
+          desc="Histori proyek"
         />
 
       </div>
@@ -53,4 +53,4 @@ const Card = ({ icon, title, desc }) => (
   </div>
 );
 
-export default SalesPage;
+export default KontraktorPage;
