@@ -10,7 +10,6 @@ import {
   MapPin,
   ChevronDown,
   ChevronRight,
-  X,
   Package,
   FileText,
   History,
@@ -22,7 +21,14 @@ import {
   AlertTriangle
 } from "lucide-react";
 
+/* IMPORT PAGE */
+import ITPage from "./ITPage";
+import ServicePage from "./ServicePage";
+import SalesPage from "./SalesPage";
+import KontraktorPage from "./KontraktorPage";
+
 const SuperAdminDashboard = ({ user, logout }) => {
+
   const [openDivisi, setOpenDivisi] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState("dashboard");
@@ -88,8 +94,22 @@ const SuperAdminDashboard = ({ user, logout }) => {
                   />
                 </div>
 
-                <SidebarItem icon={<Hammer size={16} />} text="Kontraktor" />
-                <SidebarItem icon={<BarChart3 size={16} />} text="Sales" />
+                <div onClick={() => setCurrentPage("kontraktor")}>
+                  <SidebarItem
+                    icon={<Hammer size={16} />}
+                    text="Kontraktor"
+                    active={currentPage === "kontraktor"}
+                  />
+                </div>
+
+                <div onClick={() => setCurrentPage("sales")}>
+                  <SidebarItem
+                    icon={<BarChart3 size={16} />}
+                    text="Sales"
+                    active={currentPage === "sales"}
+                  />
+                </div>
+
               </div>
             )}
 
@@ -125,6 +145,7 @@ const SuperAdminDashboard = ({ user, logout }) => {
           </div>
         </header>
 
+        {/* CONTENT */}
         <div className="flex-1 p-6 md:p-10 overflow-y-auto">
 
           {/* ================= DASHBOARD ================= */}
@@ -144,41 +165,22 @@ const SuperAdminDashboard = ({ user, logout }) => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
 
-                  <Card
-                    title="IT"
-                    desc="Kelola dokumentasi IT"
-                    image="/images/istockphoto-1321221451-612x61211.jpg"
-                    setCurrentPage={setCurrentPage}
-                  />
-
-                  <Card
-                    title="SERVICE"
-                    desc="Kelola dokumentasi Service"
-                    image="/images/service.jpg"
-                    setCurrentPage={setCurrentPage}
-                  />
-
-                  <Card
-                    title="KONTRAKTOR"
-                    desc="Kelola dokumentasi Kontraktor"
-                    image="/images/kontraktor.jpg"
-                  />
-
-                  <Card
-                    title="SALES"
-                    desc="Kelola dokumentasi Sales"
-                    image="/images/sales.jpg"
-                  />
+                  <Card title="IT" desc="Kelola dokumentasi IT" image="/images/istockphoto-1321221451-612x61211.jpg" setCurrentPage={setCurrentPage} />
+                  <Card title="SERVICE" desc="Kelola dokumentasi Service" image="/images/service.jpg" setCurrentPage={setCurrentPage} />
+                  <Card title="KONTRAKTOR" desc="Kelola dokumentasi Kontraktor" image="/images/kontraktor.jpg" setCurrentPage={setCurrentPage} />
+                  <Card title="SALES" desc="Kelola dokumentasi Sales" image="/images/sales.jpg" setCurrentPage={setCurrentPage} />
 
                 </div>
               </div>
 
               {/* SUMMARY */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
+
                 <SummaryCard title="Total Tugas" value="235" icon={<ListTodo />} color="blue" />
                 <SummaryCard title="Tugas Selesai" value="180" icon={<CheckCircle />} color="green" />
                 <SummaryCard title="Sedang Dikerjakan" value="42" icon={<Clock />} color="yellow" />
                 <SummaryCard title="Tugas Terlambat" value="13" icon={<AlertTriangle />} color="red" />
+
               </div>
 
               {/* TABLE */}
@@ -209,39 +211,11 @@ const SuperAdminDashboard = ({ user, logout }) => {
             </>
           )}
 
-          {/* ================= IT PAGE ================= */}
-          {currentPage === "it" && (
-            <>
-              <button onClick={() => setCurrentPage("dashboard")} className="mb-6 bg-gray-200 px-4 py-2 rounded-lg">
-                ← Kembali
-              </button>
-
-              <h2 className="text-3xl font-bold mb-10">IT</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <ServiceCard icon={<Monitor size={28} />} title="ASET IT" desc="Kelola perangkat dan infrastruktur IT" />
-                <ServiceCard icon={<FileText size={28} />} title="Dokumentasi IT" desc="Upload laporan kerja IT" />
-                <ServiceCard icon={<History size={28} />} title="Riwayat IT" desc="Histori pekerjaan IT" />
-              </div>
-            </>
-          )}
-
-          {/* ================= SERVICE PAGE ================= */}
-          {currentPage === "service" && (
-            <>
-              <button onClick={() => setCurrentPage("dashboard")} className="mb-6 bg-gray-200 px-4 py-2 rounded-lg">
-                ← Kembali
-              </button>
-
-              <h2 className="text-3xl font-bold mb-10">Service</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <ServiceCard icon={<Package size={28} />} title="Inventory Barang" desc="Kelola stok barang" />
-                <ServiceCard icon={<FileText size={28} />} title="Dokumentasi" desc="Upload laporan kerja" />
-                <ServiceCard icon={<History size={28} />} title="Riwayat" desc="Histori pekerjaan" />
-              </div>
-            </>
-          )}
+          {/* ================= PAGE ASLI ================= */}
+          {currentPage === "it" && <ITPage goBack={() => setCurrentPage("dashboard")} />}
+          {currentPage === "service" && <ServicePage goBack={() => setCurrentPage("dashboard")} />}
+          {currentPage === "sales" && <SalesPage goBack={() => setCurrentPage("dashboard")} />}
+          {currentPage === "kontraktor" && <KontraktorPage goBack={() => setCurrentPage("dashboard")} />}
 
         </div>
       </main>
@@ -249,7 +223,7 @@ const SuperAdminDashboard = ({ user, logout }) => {
   );
 };
 
-/* COMPONENTS */
+/* ================= COMPONENT ================= */
 
 const SidebarItem = ({ icon, text, active }) => (
   <div className={`flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer transition
@@ -260,9 +234,9 @@ const SidebarItem = ({ icon, text, active }) => (
 );
 
 const Card = ({ title, desc, image, setCurrentPage }) => {
+
   const handleClick = () => {
-    if (title === "SERVICE") setCurrentPage("service");
-    if (title === "IT") setCurrentPage("it");
+    setCurrentPage(title.toLowerCase());
   };
 
   return (
@@ -279,6 +253,7 @@ const Card = ({ title, desc, image, setCurrentPage }) => {
 };
 
 const SummaryCard = ({ title, value, icon, color }) => {
+
   const colorMap = {
     blue: "bg-blue-100 text-blue-600",
     green: "bg-green-100 text-green-600",
@@ -299,15 +274,8 @@ const SummaryCard = ({ title, value, icon, color }) => {
   );
 };
 
-const ServiceCard = ({ icon, title, desc }) => (
-  <div className="bg-white p-6 rounded-2xl shadow hover:shadow-lg transition">
-    <div className="mb-4 text-blue-600">{icon}</div>
-    <h3 className="text-xl font-semibold mb-2">{title}</h3>
-    <p className="text-gray-500 text-sm">{desc}</p>
-  </div>
-);
-
 const ReportRow = ({ divisi, tugas, karyawan, lokasi, status, tanggal }) => {
+
   const statusColor = {
     Selesai: "bg-green-100 text-green-600",
     Proses: "bg-yellow-100 text-yellow-600",
