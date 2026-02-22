@@ -1,26 +1,14 @@
 import React, { useState } from "react";
 import {
-  LayoutDashboard,
-  Folder,
-  Wrench,
-  User,
-  BarChart3,
-  Bell,
-  Menu,
   MapPin,
-  ChevronDown,
-  ChevronRight,
-  Package,
-  FileText,
-  History,
-  Monitor,
-  Hammer,
   ListTodo,
   CheckCircle,
   Clock,
   AlertTriangle
 } from "lucide-react";
 import Profile from "./Profile.jsx";
+import Sidebar from "../components/layout/Sidebar";
+import Header from "../components/layout/Header";
 
 /* IMPORT PAGE */
 import ITPage from "./ITPage";
@@ -30,24 +18,14 @@ import KontraktorPage from "./KontraktorPage";
 
 const SuperAdminDashboard = ({ user, logout }) => {
 
-  const [openDivisi, setOpenDivisi] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [currentUser, setCurrentUser] = useState(user);
 
   const handleProfileUpdate = (updatedUser) => {
     setCurrentUser(updatedUser);
   };
-
-  // Get photo URL
-  const getPhotoUrl = (photoPath) => {
-    if (!photoPath) return null;
-    if (photoPath.startsWith('http')) return photoPath;
-    return `/storage/${photoPath}`;
-  };
-
-  const photoUrl = getPhotoUrl(currentUser?.profile_photo);
-  const initialLetter = currentUser?.name?.charAt(0);
 
   /* ================= PROFILE PAGE ================= */
   if (currentPage === "profile") {
@@ -57,6 +35,8 @@ const SuperAdminDashboard = ({ user, logout }) => {
         logout={logout}
         onProfileUpdate={handleProfileUpdate}
         setCurrentPage={setCurrentPage}
+        sidebarExpanded={sidebarExpanded}
+        setSidebarExpanded={setSidebarExpanded}
       />
     );
   }
@@ -65,127 +45,29 @@ const SuperAdminDashboard = ({ user, logout }) => {
     <div className="flex min-h-screen bg-[#f4f6fb] relative">
 
       {/* ================= SIDEBAR ================= */}
-      <aside
-        className={`fixed z-40 top-0 left-0 h-full
-        w-72 bg-gradient-to-b from-[#0f172a] to-black text-white
-        flex flex-col justify-between p-6 overflow-y-auto
-        transform transition-transform duration-300
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
-      >
-        <div>
-
-          <div className="hidden lg:flex justify-center mb-10">
-            <img
-              src="/images/LOGO HSR.png"
-              alt="HSR Logo"
-              className="h-14 object-contain"
-            />
-          </div>
-
-          <div className="space-y-2">
-
-            <div onClick={() => setCurrentPage("dashboard")}>
-              <SidebarItem
-                icon={<LayoutDashboard size={18} />}
-                text="Dashboard"
-                active={currentPage === "dashboard"}
-              />
-            </div>
-
-            <div
-              className="flex items-center justify-between px-4 py-2 rounded-lg hover:bg-slate-800 cursor-pointer transition"
-              onClick={() => setOpenDivisi(!openDivisi)}
-            >
-              <div className="flex items-center gap-3">
-                <Folder size={18} />
-                Divisi
-              </div>
-              {openDivisi ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </div>
-
-            {openDivisi && (
-              <div className="ml-6 space-y-1 text-sm">
-
-                <div onClick={() => setCurrentPage("it")}>
-                  <SidebarItem
-                    icon={<Monitor size={16} />}
-                    text="IT"
-                    active={currentPage === "it"}
-                  />
-                </div>
-
-                <div onClick={() => setCurrentPage("service")}>
-                  <SidebarItem
-                    icon={<Wrench size={16} />}
-                    text="Service"
-                    active={currentPage === "service"}
-                  />
-                </div>
-
-                <div onClick={() => setCurrentPage("kontraktor")}>
-                  <SidebarItem
-                    icon={<Hammer size={16} />}
-                    text="Kontraktor"
-                    active={currentPage === "kontraktor"}
-                  />
-                </div>
-
-                <div onClick={() => setCurrentPage("sales")}>
-                  <SidebarItem
-                    icon={<BarChart3 size={16} />}
-                    text="Sales"
-                    active={currentPage === "sales"}
-                  />
-                </div>
-
-              </div>
-            )}
-
-            <div onClick={() => setCurrentPage("profile")}>
-              <SidebarItem
-                icon={<User size={18} />}
-                text="Profile"
-                active={currentPage === "profile"}
-              />
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={logout}
-          className="bg-red-600 hover:bg-red-700 py-3 rounded-xl font-medium shadow-lg transition"
-        >
-          Logout
-        </button>
-      </aside>
+      <Sidebar
+        user={currentUser}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        logout={logout}
+        isExpanded={sidebarExpanded}
+        setIsExpanded={setSidebarExpanded}
+      />
 
       {/* ================= MAIN ================= */}
-      <main className="flex-1 flex flex-col min-w-0 lg:ml-72">
+      <main
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out
+        ${sidebarExpanded ? "lg:ml-72" : "lg:ml-20"}`}
+      >
 
         {/* HEADER */}
-        <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold">Dokumentasi Kerja</h1>
-
-          <div className="flex items-center gap-4">
-            <Bell size={20} className="text-gray-600" />
-            <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-full">
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt="Profile"
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center">
-                  {initialLetter}
-                </div>
-              )}
-              <span className="font-medium hidden sm:block">
-                {currentUser?.name}
-              </span>
-            </div>
-          </div>
-        </header>
+        <Header
+          user={currentUser}
+          currentPage={currentPage}
+          showBell={true}
+        />
 
         {/* CONTENT */}
         <div className="flex-1 p-6 md:p-10 overflow-y-auto">
@@ -266,14 +148,6 @@ const SuperAdminDashboard = ({ user, logout }) => {
 };
 
 /* ================= COMPONENT ================= */
-
-const SidebarItem = ({ icon, text, active }) => (
-  <div className={`flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer transition
-  ${active ? "bg-blue-600" : "hover:bg-slate-800"}`}>
-    {icon}
-    {text}
-  </div>
-);
 
 const Card = ({ title, desc, image, setCurrentPage }) => {
 

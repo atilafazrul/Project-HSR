@@ -88,11 +88,10 @@ export default function Login({ setUser }) {
                     <div className="relative w-[150px] h-6 overflow-hidden">
 
                         <span
-                            className={`absolute left-0 transition-all duration-500 ${
-                                animate
-                                    ? "opacity-100 translate-y-0"
-                                    : "opacity-0 -translate-y-3"
-                            } text-pink-600 font-bold tracking-widest`}
+                            className={`absolute left-0 transition-all duration-500 ${animate
+                                ? "opacity-100 translate-y-0"
+                                : "opacity-0 -translate-y-3"
+                                } text-pink-600 font-bold tracking-widest`}
                         >
                             {divisions[currentDivision]}
                         </span>
@@ -140,11 +139,10 @@ export default function Login({ setUser }) {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full py-2 rounded-lg font-semibold text-white transition ${
-                            loading
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-gradient-to-r from-pink-500 to-pink-600 hover:opacity-90"
-                        }`}
+                        className={`w-full py-2 rounded-lg font-semibold text-white cursor-pointer transition ${loading
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-gradient-to-r from-pink-500 to-pink-600 hover:opacity-90"
+                            }`}
                     >
                         {loading ? "Loading..." : "LOGIN"}
                     </button>
