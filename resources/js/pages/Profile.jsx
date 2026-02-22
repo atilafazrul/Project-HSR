@@ -9,24 +9,16 @@ import {
   X,
   Camera,
   Trash2,
-  LayoutDashboard,
-  Folder,
-  Wrench,
-  BarChart3,
-  ChevronDown,
-  ChevronRight,
-  Monitor,
-  Hammer,
-  Menu
 } from "lucide-react";
+import Sidebar from "../components/layout/Sidebar";
+import Header from "../components/layout/Header";
 
-export default function Profile({ user, logout, onProfileUpdate, setCurrentPage }) {
+export default function Profile({ user, logout, onProfileUpdate, setCurrentPage, sidebarExpanded, setSidebarExpanded }) {
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [openDivisi, setOpenDivisi] = useState(true);
 
   const fileInputRef = useRef(null);
 
@@ -47,36 +39,6 @@ export default function Profile({ user, logout, onProfileUpdate, setCurrentPage 
 
   // Cek apakah user super admin (divisi null)
   const isSuperAdmin = user?.role === 'super_admin' || !user?.divisi;
-
-  // Get divisi page untuk navigasi
-  const getDivisiPage = (divisiName) => {
-    const map = {
-      'IT': 'it',
-      'SERVICE': 'service',
-      'KONTRAKTOR': 'kontraktor',
-      'SALES': 'sales'
-    };
-    return map[divisiName?.toUpperCase()] || 'service';
-  };
-
-  // Get icon untuk divisi
-  const getDivisiIcon = (divisiName) => {
-    const map = {
-      'IT': <Monitor size={16} />,
-      'SERVICE': <Wrench size={16} />,
-      'KONTRAKTOR': <Hammer size={16} />,
-      'SALES': <BarChart3 size={16} />
-    };
-    return map[divisiName?.toUpperCase()] || <Wrench size={16} />;
-  };
-
-  // Daftar semua divisi untuk super admin
-  const allDivisis = [
-    { name: 'IT', icon: <Monitor size={16} /> },
-    { name: 'Service', icon: <Wrench size={16} /> },
-    { name: 'Kontraktor', icon: <Hammer size={16} /> },
-    { name: 'Sales', icon: <BarChart3 size={16} /> }
-  ];
 
   // Load profile data dari server (di background, tanpa blocking UI)
   useEffect(() => {
@@ -291,15 +253,6 @@ export default function Profile({ user, logout, onProfileUpdate, setCurrentPage 
   const photoUrl = getPhotoUrl(profileData.profile_photo);
   const initialLetter = profileData.name?.charAt(0) || user?.name?.charAt(0);
 
-  // SidebarItem Component
-  const SidebarItem = ({ icon, text, active }) => (
-    <div className={`flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer transition
-    ${active ? "bg-blue-600" : "hover:bg-slate-800"}`}>
-      {icon}
-      {text}
-    </div>
-  );
-
   return (
     <div className="flex min-h-screen bg-[#f4f6fb] relative">
       {/* Input file tersembunyi */}
@@ -312,130 +265,32 @@ export default function Profile({ user, logout, onProfileUpdate, setCurrentPage 
       />
 
       {/* ================= SIDEBAR ================= */}
-      <aside
-        className={`fixed z-40 top-0 left-0 h-full
-        w-72 bg-gradient-to-b from-[#0f172a] to-black text-white
-        flex flex-col justify-between p-6 overflow-y-auto
-        transform transition-transform duration-300
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
-      >
-        <div>
-          <div className="hidden lg:flex justify-center mb-10">
-            <img
-              src="/images/LOGO HSR.png"
-              alt="HSR Logo"
-              className="h-14 object-contain"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div onClick={() => setCurrentPage && setCurrentPage("dashboard")}>
-              <SidebarItem
-                icon={<LayoutDashboard size={18} />}
-                text="Dashboard"
-                active={false}
-              />
-            </div>
-
-            {/* SECTION DIVISI */}
-            {!isSuperAdmin ? (
-              // ADMIN biasa - hanya tampilkan divisi sendiri
-              <>
-                <div className="flex items-center gap-3 px-4 py-2 bg-slate-800 rounded-lg">
-                  <Folder size={18} />
-                  Divisi
-                </div>
-                <div className="ml-6">
-                  <div onClick={() => setCurrentPage && setCurrentPage(getDivisiPage(user?.divisi))}>
-                    <SidebarItem
-                      icon={getDivisiIcon(user?.divisi)}
-                      text={user?.divisi}
-                      active={false}
-                    />
-                  </div>
-                </div>
-              </>
-            ) : (
-              // SUPER ADMIN - tampilkan semua divisi dengan dropdown
-              <>
-                <div
-                  className="flex items-center justify-between px-4 py-2 rounded-lg hover:bg-slate-800 cursor-pointer transition"
-                  onClick={() => setOpenDivisi(!openDivisi)}
-                >
-                  <div className="flex items-center gap-3">
-                    <Folder size={18} />
-                    Divisi
-                  </div>
-                  {openDivisi ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                </div>
-
-                {openDivisi && (
-                  <div className="ml-6 space-y-1 text-sm">
-                    {allDivisis.map((divisi) => (
-                      <div
-                        key={divisi.name}
-                        onClick={() => setCurrentPage && setCurrentPage(getDivisiPage(divisi.name))}
-                      >
-                        <SidebarItem
-                          icon={divisi.icon}
-                          text={divisi.name}
-                          active={false}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            <SidebarItem
-              icon={<User size={18} />}
-              text="Profile"
-              active={true}
-            />
-          </div>
-        </div>
-
-        <button
-          onClick={logout}
-          className="bg-red-600 hover:bg-red-700 py-3 rounded-xl font-medium shadow-lg transition"
-        >
-          Logout
-        </button>
-      </aside>
+      <Sidebar
+        user={user}
+        currentPage="profile"
+        setCurrentPage={setCurrentPage}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        logout={logout}
+        isExpanded={sidebarExpanded}
+        setIsExpanded={setSidebarExpanded}
+      />
 
       {/* ================= MAIN ================= */}
-      <main className="flex-1 flex flex-col min-w-0 lg:ml-72">
+      <main
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out
+        ${sidebarExpanded ? "lg:ml-72" : "lg:ml-20"}`}
+      >
         {/* HEADER */}
-        <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Menu
-              size={22}
-              className="cursor-pointer lg:hidden"
-              onClick={() => setSidebarOpen(true)}
-            />
-            <h1 className="text-xl font-semibold">Profile</h1>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-full">
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt="Profile"
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center">
-                  {initialLetter}
-                </div>
-              )}
-              <span className="font-medium hidden sm:block">
-                {profileData.name || user?.name}
-              </span>
-            </div>
-          </div>
-        </header>
+        <Header
+          user={{
+            ...user,
+            name: profileData.name || user?.name,
+            profile_photo: profileData.profile_photo
+          }}
+          currentPage="profile"
+          showBell={false}
+        />
 
         {/* CONTENT */}
         <div className="flex-1 p-6 md:p-10 overflow-y-auto">
@@ -446,7 +301,7 @@ export default function Profile({ user, logout, onProfileUpdate, setCurrentPage 
             </p>
 
             {/* PROFILE CARD */}
-            <div className="bg-white rounded-3xl shadow-lg p-8">
+            <div className="bg-white rounded-3xl shadow-lg p-8 pt-16">
               {/* AVATAR SECTION */}
               <div className="flex flex-col items-center mb-10">
                 <div className="relative">
@@ -517,7 +372,7 @@ export default function Profile({ user, logout, onProfileUpdate, setCurrentPage 
                         placeholder="Masukkan nama lengkap"
                       />
                     ) : (
-                      <p className="mt-2 text-gray-900 font-medium">
+                      <p className="mt-1 text-gray-900 font-medium">
                         {profileData.name || "-"}
                       </p>
                     )}
@@ -542,7 +397,7 @@ export default function Profile({ user, logout, onProfileUpdate, setCurrentPage 
                         placeholder="Masukkan email"
                       />
                     ) : (
-                      <p className="mt-2 text-gray-900 font-medium">
+                      <p className="mt-1 text-gray-900 font-medium">
                         {profileData.email || "-"}
                       </p>
                     )}
@@ -567,7 +422,7 @@ export default function Profile({ user, logout, onProfileUpdate, setCurrentPage 
                         placeholder="Masukkan nomor HP"
                       />
                     ) : (
-                      <p className="mt-2 text-gray-900 font-medium">
+                      <p className="mt-1 text-gray-900 font-medium">
                         {profileData.phone || "-"}
                       </p>
                     )}
@@ -592,7 +447,7 @@ export default function Profile({ user, logout, onProfileUpdate, setCurrentPage 
                         placeholder="Masukkan alamat lengkap"
                       />
                     ) : (
-                      <p className="mt-2 text-gray-900 font-medium">
+                      <p className="mt-1 text-gray-900 font-medium">
                         {profileData.address || "-"}
                       </p>
                     )}
@@ -625,7 +480,7 @@ export default function Profile({ user, logout, onProfileUpdate, setCurrentPage 
                 ) : (
                   <button
                     onClick={handleEdit}
-                    className="px-6 py-3 rounded-xl font-medium text-white bg-blue-600 hover:bg-blue-700 transition flex items-center gap-2"
+                    className="px-6 py-3 rounded-xl font-medium text-white bg-blue-600 hover:bg-blue-700 transition flex items-center gap-2 cursor-pointer"
                   >
                     <Edit2 size={18} />
                     Edit Profile
