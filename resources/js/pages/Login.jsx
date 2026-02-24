@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 export default function Login({ setUser }) {
-
-  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,7 +12,6 @@ export default function Login({ setUser }) {
 
 
   /* ================= ANIMATION ================= */
-
   useEffect(() => {
 
     const interval = setInterval(() => {
@@ -23,7 +19,7 @@ export default function Login({ setUser }) {
       setAnimate(false);
 
       setTimeout(() => {
-        setCurrentDivision((prev) => (prev + 1) % divisions.length);
+        setCurrentDivision(prev => (prev + 1) % divisions.length);
         setAnimate(true);
       }, 400);
 
@@ -31,11 +27,10 @@ export default function Login({ setUser }) {
 
     return () => clearInterval(interval);
 
-  }, []);
+  }, []); // ⚠️ DEPENDENCY TETAP
 
 
   /* ================= LOGIN ================= */
-
   const handleLogin = async (e) => {
 
     e.preventDefault();
@@ -57,21 +52,14 @@ export default function Login({ setUser }) {
 
       const data = await response.json();
 
+      console.log("LOGIN RESPONSE:", data);
+
       if (response.ok && data.success) {
 
-        console.log("Login success:", data.user);
+        localStorage.setItem("user", JSON.stringify(data.user));
 
-        // Simpan user ke App.jsx
+        // Kirim ke App.jsx
         setUser(data.user);
-
-
-        /* ================= REDIRECT ================= */
-
-        if (data.user.role === "super_admin") {
-          navigate("/super_admin");
-        } else {
-          navigate("/admin");
-        }
 
       } else {
 
@@ -94,11 +82,9 @@ export default function Login({ setUser }) {
 
 
   /* ================= UI ================= */
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
 
-      {/* TITLE */}
       <h1 className="text-4xl font-semibold mb-6 text-center">
         Inspection Preventive Maintenance
       </h1>
@@ -144,43 +130,36 @@ export default function Login({ setUser }) {
 
         <form onSubmit={handleLogin} className="space-y-5">
 
-          {/* EMAIL */}
           <div>
-            <label className="text-sm font-medium">Email</label>
+            <label>Email</label>
 
             <input
               type="email"
-              className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400"
+              className="w-full mt-1 px-4 py-2 border rounded-lg"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               required
             />
           </div>
 
 
-          {/* PASSWORD */}
           <div>
-            <label className="text-sm font-medium">Password</label>
+            <label>Password</label>
 
             <input
               type="password"
-              className="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400"
+              className="w-full mt-1 px-4 py-2 border rounded-lg"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={e => setPassword(e.target.value)}
               required
             />
           </div>
 
 
-          {/* BUTTON */}
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2 rounded-lg font-semibold text-white transition ${
-              loading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-pink-500 to-pink-600 hover:opacity-90"
-            }`}
+            className="w-full py-2 rounded-lg bg-pink-600 text-white"
           >
             {loading ? "Loading..." : "LOGIN"}
           </button>

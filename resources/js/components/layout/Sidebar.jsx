@@ -52,13 +52,19 @@ export default function Sidebar({
   const isSuperAdmin = role === "super_admin";
   const isAdmin = role === "admin";
 
-  /* ================= ROUTE HELPER ================= */
+  /* ================= FIX ROUTE ACTIVE ================= */
 
   const isActive = (path) => {
-    return location.pathname.startsWith(path);
+    return (
+      location.pathname === path ||
+      location.pathname.startsWith(path + "/")
+    );
   };
 
-  const basePath = isSuperAdmin ? "/super_admin" : "/admin";
+  const basePath =
+    user?.role === "super_admin"
+      ? "/super_admin"
+      : "/admin";
 
   const allDivisis = [
     { name: "IT", path: "it", icon: <Monitor size={18} /> },
@@ -171,12 +177,20 @@ export default function Sidebar({
           {/* ADMIN: SINGLE DIVISI */}
           {isAdmin && !isSuperAdmin && (
 
-            <div onClick={() => navigate(`${basePath}/${user?.divisi?.toLowerCase() || "service"}`)}>
+            <div
+              onClick={() =>
+                navigate(
+                  `${basePath}/${user?.divisi?.toLowerCase() || "service"}`
+                )
+              }
+            >
 
               <SidebarItem
                 icon={<Folder size={18} />}
                 text={user?.divisi || "Service"}
-                active={isActive(`${basePath}/${user?.divisi?.toLowerCase() || "service"}`)}
+                active={isActive(
+                  `${basePath}/${user?.divisi?.toLowerCase() || "service"}`
+                )}
                 expanded={expanded}
                 indented
               />

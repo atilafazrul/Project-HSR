@@ -1,10 +1,22 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, FileText, History } from "lucide-react";
+import { BarChart3, History, ListTodo } from "lucide-react";
 
 const SalesPage = () => {
 
   const navigate = useNavigate();
+
+  // =============================
+  // AMBIL USER DARI LOCALSTORAGE
+  // =============================
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role;
+
+  const basePath =
+    role === "super_admin"
+      ? "/super_admin"
+      : "/admin";
+
 
   return (
     <div>
@@ -13,7 +25,7 @@ const SalesPage = () => {
       <div className="flex items-center gap-4 mb-6">
 
         <button
-          onClick={() => navigate("/super_admin/dashboard")}
+          onClick={() => navigate(`${basePath}/dashboard`)}
           className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg"
         >
           ← Kembali
@@ -26,29 +38,35 @@ const SalesPage = () => {
 
 
       <p className="text-gray-500 mb-8">
-        Kelola target, laporan, dan riwayat penjualan
+        Kelola target, progres pekerjaan, dan riwayat penjualan
       </p>
 
 
       {/* CARD */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
+        {/* TARGET */}
         <Card
           icon={<BarChart3 size={30} className="text-blue-600" />}
           title="Target"
-          desc="Kelola target penjualan"
+          desc="Kelola target dan performa penjualan"
+          onClick={() => navigate(`${basePath}/sales/target`)}
         />
 
+        {/* PROGRES */}
         <Card
-          icon={<FileText size={30} className="text-green-600" />}
-          title="Report"
-          desc="Upload laporan penjualan"
+          icon={<ListTodo size={30} className="text-green-600" />}
+          title="Progres Pekerjaan"
+          desc="Pantau status dan perkembangan penjualan"
+          onClick={() => navigate(`${basePath}/sales/projek`)}
         />
 
+        {/* RIWAYAT */}
         <Card
           icon={<History size={30} className="text-purple-600" />}
           title="Riwayat"
-          desc="Histori transaksi"
+          desc="Histori transaksi dan penjualan"
+          onClick={() => navigate(`${basePath}/sales/riwayat`)}
         />
 
       </div>
@@ -60,8 +78,11 @@ const SalesPage = () => {
 
 
 /* CARD */
-const Card = ({ icon, title, desc }) => (
-  <div className="bg-white p-6 rounded-2xl shadow hover:shadow-lg transition">
+const Card = ({ icon, title, desc, onClick }) => (
+  <div
+    onClick={onClick}
+    className="bg-white p-6 rounded-2xl shadow hover:shadow-lg transition cursor-pointer"
+  >
 
     <div className="mb-4">{icon}</div>
 
