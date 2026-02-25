@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 
 use App\Models\User;
 use App\Http\Controllers\ProjekKerjaController;
+use App\Http\Controllers\ServiceReportController;
 
 
 /*
@@ -221,3 +222,26 @@ Route::delete('/projek-kerja/{id}', [
     ProjekKerjaController::class,
     'destroy'
 ]);
+
+
+/*
+|--------------------------------------------------------------------------
+| SERVICE REPORT API
+|--------------------------------------------------------------------------
+*/
+
+// ================= READ =================
+Route::get('/service-reports', [ServiceReportController::class, 'index']);
+Route::get('/service-reports/{id}', [ServiceReportController::class, 'show']);
+
+// ================= CREATE =================
+Route::post('/service-reports', [ServiceReportController::class, 'store']);
+
+// ================= UPDATE =================
+Route::put('/service-reports/{id}', [ServiceReportController::class, 'update']);
+
+// ================= DELETE =================
+Route::delete('/service-reports/{id}', [ServiceReportController::class, 'destroy']);
+
+// ================= PDF =================
+Route::get('/service-reports/{id}/pdf', [ServiceReportController::class, 'generatePDF']);

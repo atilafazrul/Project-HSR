@@ -28,6 +28,7 @@ import SalesPage from "./SalesPage";
 import KontraktorPage from "./KontraktorPage";
 import ProjekKerjaPage from "./ProjekKerjaPage";
 import FotoProjekPage from "./FotoProjekPage";
+import GeneratePDFPage from "./GeneratePDFPage";
 
 /* ================= DUMMY ================= */
 
@@ -51,6 +52,10 @@ export default function SuperAdminDashboard({ user, logout }) {
 
     if (path.includes("projek-kerja/foto")) return "Kelola Foto";
     if (path.includes("projek-kerja")) return "Projek Kerja";
+    if (path.includes("/it/buat-pdf")) return "Buat PDF - IT";
+    if (path.includes("/service/buat-pdf")) return "Buat PDF - Service";
+    if (path.includes("/sales/buat-pdf")) return "Buat PDF - Sales";
+    if (path.includes("/kontraktor/buat-pdf")) return "Buat PDF - Kontraktor";
     if (path.includes("/it")) return "Divisi IT";
     if (path.includes("service")) return "Divisi Service";
     if (path.includes("sales")) return "Divisi Sales";
@@ -102,22 +107,26 @@ export default function SuperAdminDashboard({ user, logout }) {
               <Route index element={<ITPage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
               <Route path="aset" element={<ComingSoon title="Aset IT" />} />
+              <Route path="buat-pdf" element={<GeneratePDFPage user={user} />} />
             </Route>
 
             <Route path="service">
               <Route index element={<ServicePage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
+              <Route path="buat-pdf" element={<GeneratePDFPage user={user} />} />
             </Route>
 
             <Route path="sales">
               <Route index element={<SalesPage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
+              <Route path="buat-pdf" element={<GeneratePDFPage user={user} />} />
             </Route>
 
             <Route path="kontraktor">
               <Route index element={<KontraktorPage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
               <Route path="proyek" element={<ComingSoon title="Data Proyek" />} />
+              <Route path="buat-pdf" element={<GeneratePDFPage user={user} />} />
             </Route>
 
             <Route path="projek-kerja" element={<ProjekKerjaPage />} />
