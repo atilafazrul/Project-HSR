@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, FileText, History, Plus } from "lucide-react";
 import { usePdf } from "./generatepdf/usePdf";
 import pdfForm from "./generatepdf/pdfform";
@@ -7,10 +7,16 @@ import DocumentationHistory from "./generatepdf/pdfHistory";
 
 export default function GeneratePDFPage({ user }) {
   const navigate = useNavigate();
-  const { divisi } = useParams();
+  const location = useLocation();
 
-  // Normalize divisi from URL
-  const currentDivisi = divisi?.toUpperCase() || "IT";
+  // Extract divisi from URL pathname
+  // Path format: /super_admin/it/buat-pdf, /admin/service/buat-pdf, etc.
+  const pathSegments = location.pathname.split('/');
+  // Find the segment before 'buat-pdf' which should be the divisi
+  const buatPdfIndex = pathSegments.findIndex(seg => seg === 'buat-pdf');
+  const currentDivisi = buatPdfIndex > 0
+    ? pathSegments[buatPdfIndex - 1].toUpperCase()
+    : "IT";
 
   // Use the custom hook
   const {

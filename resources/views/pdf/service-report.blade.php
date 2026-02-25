@@ -332,7 +332,7 @@
                 @foreach($report->parts as $index => $part)
                     <tr>
                         <td align="center">{{ $index + 1 }}</td>
-                        <td>{{ $part->part_name }}</td>
+                        <td align="center">{{ $part->part_name }}</td>
                         <td align="center">{{ $part->part_no }}</td>
                         <td align="center">{{ $part->in }}</td>
                         <td align="center">{{ $part->out }}</td>

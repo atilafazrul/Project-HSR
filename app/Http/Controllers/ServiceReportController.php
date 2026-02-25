@@ -16,6 +16,11 @@ class ServiceReportController extends Controller
 {
     /**
      * Get all service reports with filtering by user/divisi
+     *
+     * Role Access:
+     * - super_admin: Bisa lihat semua, atau filter by divisi (jika parameter divisi dikirim)
+     * - admin: Hanya lihat divisi sesuai user.divisi miliknya
+     * - it/service/sales/kontraktor: Hanya lihat data miliknya sendiri (by user_id)
      */
     public function index(Request $request)
     {
@@ -23,19 +28,26 @@ class ServiceReportController extends Controller
 
         $userId = $request->query('user_id');
         $userRole = $request->query('user_role');
-        $divisi = $request->query('divisi');
+        $userDivisi = $request->query('user_divisi'); // Divisi dari user yang login
+        $divisiFilter = $request->query('divisi'); // Filter divisi untuk superadmin
 
         // Role-based filtering
         if ($userRole === 'super_admin') {
-            // Super admin can filter by divisi
-            if ($divisi) {
-                $query->where('divisi', $divisi);
+            // Super admin: bisa lihat semua, atau filter by divisi
+            if ($divisiFilter) {
+                $query->where('divisi', $divisiFilter);
             }
+            // Jika tidak ada divisiFilter, superadmin lihat semua (tanpa where)
         } elseif ($userRole === 'admin') {
-            // Admin (without divisi) - auto filter to SERVICE
-            $query->where('divisi', 'SERVICE');
+            // Admin: hanya lihat divisi miliknya sendiri (dari user.divisi)
+            if ($userDivisi) {
+                $query->where('divisi', strtoupper($userDivisi));
+            } else {
+                // Fallback jika admin tidak punya divisi
+                $query->where('user_id', $userId);
+            }
         } else {
-            // Regular user - filter by user_id
+            // Regular user (it/service/sales/kontraktor): hanya lihat data miliknya sendiri
             if ($userId) {
                 $query->where('user_id', $userId);
             }
@@ -259,8 +271,8 @@ class ServiceReportController extends Controller
         if ($userRole === 'super_admin') {
             // Super admin can access all
         } elseif ($userRole === 'admin') {
-            // Admin can only access SERVICE divisi
-            if ($report->divisi !== 'SERVICE') {
+            // Admin can only access their own divisi
+            if ($report->divisi !== strtoupper($user->divisi)) {
                 return response()->json(['success' => false, 'message' => 'Akses ditolak'], 403);
             }
         } else {

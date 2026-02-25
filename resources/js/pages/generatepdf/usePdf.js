@@ -129,13 +129,16 @@ export const usePdf = (user, currentDivisi = "IT") => {
 
       // Role-based divisi filter:
       // - super_admin: kirim parameter divisi untuk filter (opsional)
-      // - admin (tanpa divisi): otomatis filter SERVICE di backend, tidak perlu kirim parameter
-      // - user (dengan divisi): otomatis filter by user_id di backend, tidak perlu kirim parameter
+      // - admin: kirim user_divisi agar backend filter sesuai divisi admin
+      // - user biasa (it/service/sales/kontraktor): otomatis filter by user_id di backend
       if (user.role === 'super_admin' && currentDivisi) {
-        // Super admin bisa filter by divisi
+        // Super admin bisa filter by divisi yang sedang dilihat
         params.append('divisi', currentDivisi.toUpperCase());
+      } else if (user.role === 'admin' && user.divisi) {
+        // Admin: kirim divisi miliknya agar backend filter sesuai divisi
+        params.append('user_divisi', user.divisi);
       }
-      // Untuk admin dan user, backend akan otomatis filter sesuai role
+      // Untuk role lain (it/service/sales/kontraktor), backend otomatis filter by user_id
 
       const response = await fetch(`/api/service-reports?${params.toString()}`);
       const result = await response.json();
@@ -211,14 +214,14 @@ export const usePdf = (user, currentDivisi = "IT") => {
 
       // Role-based divisi selection:
       // - super_admin: gunakan currentDivisi (bisa pilih divisi apa saja)
-      // - admin (tanpa divisi): backend akan force ke SERVICE
-      // - user (dengan divisi): gunakan divisi milik user
+      // - admin: gunakan divisi milik user (user.divisi)
+      // - user biasa (it/service/sales/kontraktor): gunakan divisi milik user
       let divisiToSend;
       if (user.role === 'super_admin') {
         divisiToSend = currentDivisi.toUpperCase();
       } else if (user.role === 'admin') {
-        // Admin tanpa divisi, backend akan force ke SERVICE
-        divisiToSend = 'SERVICE';
+        // Admin menggunakan divisi miliknya
+        divisiToSend = user.divisi ? user.divisi.toUpperCase() : 'SERVICE';
       } else {
         // User biasa, gunakan divisi milik user
         divisiToSend = user.divisi ? user.divisi.toUpperCase() : 'SERVICE';
