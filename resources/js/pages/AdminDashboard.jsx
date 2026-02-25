@@ -23,6 +23,7 @@ import SalesPage from "./SalesPage";
 import KontraktorPage from "./KontraktorPage";
 import ProjekKerjaPage from "./ProjekKerjaPage";
 import Profile from "./Profile.jsx";
+import GeneratePDFPage from "./GeneratePDFPage";
 
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
@@ -66,6 +67,10 @@ export default function AdminDashboard({ user, logout }) {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path.includes("dashboard")) return "Dashboard";
+    if (path.includes("/it/buat-pdf")) return "Buat PDF - IT";
+    if (path.includes("/service/buat-pdf")) return "Buat PDF - Service";
+    if (path.includes("/sales/buat-pdf")) return "Buat PDF - Sales";
+    if (path.includes("/kontraktor/buat-pdf")) return "Buat PDF - Kontraktor";
     if (path.includes("it")) return "Divisi IT";
     if (path.includes("service")) return "Divisi Service";
     if (path.includes("sales")) return "Divisi Sales";
@@ -234,9 +239,13 @@ export default function AdminDashboard({ user, logout }) {
             <Route path="kontraktor" element={<KontraktorPage user={user} />} />
 
             <Route path="it/projek" element={<ProjekKerjaPage />} />
+            <Route path="it/buat-pdf" element={<GeneratePDFPage user={user} />} />
             <Route path="service/projek" element={<ProjekKerjaPage />} />
+            <Route path="service/buat-pdf" element={<GeneratePDFPage user={user} />} />
             <Route path="sales/projek" element={<ProjekKerjaPage />} />
+            <Route path="sales/buat-pdf" element={<GeneratePDFPage user={user} />} />
             <Route path="kontraktor/projek" element={<ProjekKerjaPage />} />
+            <Route path="kontraktor/buat-pdf" element={<GeneratePDFPage user={user} />} />
 
             <Route path="profile" element={<Profile user={currentUser} logout={logout} />} />
 
