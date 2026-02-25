@@ -61,12 +61,12 @@ const KontraktorPage = () => {
           onClick={() => navigate(`${basePath}/kontraktor/projek`)}
         />
 
-        {/* DOKUMENTASI */}
+        {/* BUAT PDF */}
         <Card
           icon={<FileText size={30} className="text-purple-600" />}
-          title="Dokumentasi"
-          desc="Dokumentasi proyek"
-          onClick={() => navigate(`${basePath}/kontraktor/riwayat`)}
+          title="Buat PDF"
+          desc="Buat PDF pekerjaan kontraktor"
+          onClick={() => navigate(`${basePath}/kontraktor/buat-pdf`)}
         />
 
       </div>

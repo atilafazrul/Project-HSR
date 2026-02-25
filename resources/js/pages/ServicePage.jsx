@@ -68,12 +68,12 @@ export default function ServicePage() {
         />
 
 
-        {/* DOKUMENTASI */}
+        {/* BUAT PDF */}
         <Card
           icon={<FileText size={30} className="text-purple-600" />}
-          title="Dokumentasi"
-          desc="Dokumentasi servis"
-          onClick={() => navigate(`${basePath}/service/riwayat`)}
+          title="Buat PDF"
+          desc="Buat PDF pekerjaan servis"
+          onClick={() => navigate(`${basePath}/service/buat-pdf`)}
         />
 
 

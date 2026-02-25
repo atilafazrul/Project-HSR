@@ -56,12 +56,12 @@ const ITPage = () => {
           onClick={() => navigate(`${basePath}/it/projek`)}
         />
 
-        {/* DOKUMENTASI */}
+        {/* BUAT PDF */}
         <Card
           icon={<FileText size={30} className="text-purple-600" />}
-          title="Dokumentasi"
-          desc="Dokumentasi pekerjaan IT"
-          onClick={() => navigate(`${basePath}/it/riwayat`)}
+          title="Buat PDF"
+          desc="Buat PDF pekerjaan IT"
+          onClick={() => navigate(`${basePath}/it/buat-pdf`)}
         />
 
       </div>

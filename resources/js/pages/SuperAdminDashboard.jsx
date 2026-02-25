@@ -80,9 +80,8 @@ export default function SuperAdminDashboard({ user, logout }) {
       />
 
       <main
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarExpanded ? "lg:ml-72" : "lg:ml-20"
-        }`}
+        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarExpanded ? "lg:ml-72" : "lg:ml-20"
+          }`}
       >
 
         <Header
@@ -103,26 +102,22 @@ export default function SuperAdminDashboard({ user, logout }) {
               <Route index element={<ITPage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
               <Route path="aset" element={<ComingSoon title="Aset IT" />} />
-              <Route path="riwayat" element={<ComingSoon title="Riwayat IT" />} />
             </Route>
 
             <Route path="service">
               <Route index element={<ServicePage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
-              <Route path="riwayat" element={<ComingSoon title="Riwayat Service" />} />
             </Route>
 
             <Route path="sales">
               <Route index element={<SalesPage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
-              <Route path="riwayat" element={<ComingSoon title="Riwayat Sales" />} />
             </Route>
 
             <Route path="kontraktor">
               <Route index element={<KontraktorPage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
               <Route path="proyek" element={<ComingSoon title="Data Proyek" />} />
-              <Route path="riwayat" element={<ComingSoon title="Riwayat Kontraktor" />} />
             </Route>
 
             <Route path="projek-kerja" element={<ProjekKerjaPage />} />
