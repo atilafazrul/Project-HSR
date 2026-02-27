@@ -28,8 +28,11 @@ import SalesPage from "./SalesPage";
 import KontraktorPage from "./KontraktorPage";
 import ProjekKerjaPage from "./ProjekKerjaPage";
 import FotoProjekPage from "./FotoProjekPage";
+<<<<<<< HEAD
 import FormBarangPage from "./FormBarangPage";
 import EditBarangPage from "./EditBarangPage";
+=======
+>>>>>>> a7703d7d77dc671bc8c5d1e33e430d84fd52d0de
 import GeneratePDFPage from "./GeneratePDFPage";
 
 /* ================= DUMMY ================= */
@@ -56,8 +59,15 @@ export default function SuperAdminDashboard({ user, logout }) {
 
     if (path.includes("projek-kerja/foto")) return "Kelola Foto";
     if (path.includes("projek-kerja")) return "Projek Kerja";
+<<<<<<< HEAD
     if (path.includes("/buat-pdf")) return "Generate PDF";
     if (path.includes("inventory")) return "Inventory";
+=======
+    if (path.includes("/it/buat-pdf")) return "Buat PDF - IT";
+    if (path.includes("/service/buat-pdf")) return "Buat PDF - Service";
+    if (path.includes("/sales/buat-pdf")) return "Buat PDF - Sales";
+    if (path.includes("/kontraktor/buat-pdf")) return "Buat PDF - Kontraktor";
+>>>>>>> a7703d7d77dc671bc8c5d1e33e430d84fd52d0de
     if (path.includes("/it")) return "Divisi IT";
     if (path.includes("service")) return "Divisi Service";
     if (path.includes("sales")) return "Divisi Sales";
@@ -87,9 +97,8 @@ export default function SuperAdminDashboard({ user, logout }) {
       />
 
       <main
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarExpanded ? "lg:ml-72" : "lg:ml-20"
-        }`}
+        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarExpanded ? "lg:ml-72" : "lg:ml-20"
+          }`}
       >
 
         <Header
@@ -107,18 +116,25 @@ export default function SuperAdminDashboard({ user, logout }) {
             <Route path="it">
               <Route index element={<ITPage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
+<<<<<<< HEAD
               <Route path="inventory" element={<InventoryPage />} />
               <Route path="inventory/tambah" element={<FormBarangPage />} />
               <Route path="inventory/edit/:id" element={<EditBarangPage />} />
+=======
+              <Route path="aset" element={<ComingSoon title="Aset IT" />} />
+>>>>>>> a7703d7d77dc671bc8c5d1e33e430d84fd52d0de
               <Route path="buat-pdf" element={<GeneratePDFPage user={user} />} />
             </Route>
 
             <Route path="service">
               <Route index element={<ServicePage user={user} />} />
               <Route path="projek" element={<ProjekKerjaPage />} />
+<<<<<<< HEAD
               <Route path="inventory" element={<InventoryPage />} />
               <Route path="inventory/tambah" element={<FormBarangPage />} />
               <Route path="inventory/edit/:id" element={<EditBarangPage />} />
+=======
+>>>>>>> a7703d7d77dc671bc8c5d1e33e430d84fd52d0de
               <Route path="buat-pdf" element={<GeneratePDFPage user={user} />} />
             </Route>
 

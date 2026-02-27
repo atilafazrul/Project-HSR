@@ -4,7 +4,11 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
+<<<<<<< HEAD
     "content-hash": "c48b7dd06e58fdd67489793f2fca9945",
+=======
+    "content-hash": "8e14ab2726cb0d40821860cc06e335b9",
+>>>>>>> a7703d7d77dc671bc8c5d1e33e430d84fd52d0de
     "packages": [
         {
             "name": "brick/math",
@@ -3665,6 +3669,7 @@
             "time": "2026-02-21T17:12:03+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "setasign/fpdf",
             "version": "1.8.6",
             "source": {
@@ -3783,6 +3788,8 @@
             "time": "2025-08-05T09:57:14+00:00"
         },
         {
+=======
+>>>>>>> a7703d7d77dc671bc8c5d1e33e430d84fd52d0de
             "name": "symfony/clock",
             "version": "v7.4.0",
             "source": {

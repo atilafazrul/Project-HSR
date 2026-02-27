@@ -20,4 +20,8 @@ class ServiceType extends Model
     {
         return $this->belongsTo(ServiceReport::class);
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> a7703d7d77dc671bc8c5d1e33e430d84fd52d0de
