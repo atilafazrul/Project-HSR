@@ -7,11 +7,6 @@ use Illuminate\Http\Request;
 
 /* ================= MODEL ================= */
 use App\Models\User;
-<<<<<<< HEAD
-=======
-use App\Http\Controllers\ProjekKerjaController;
-use App\Http\Controllers\ServiceReportController;
->>>>>>> a7703d7d77dc671bc8c5d1e33e430d84fd52d0de
 
 /* ================= CONTROLLER ================= */
 use App\Http\Controllers\ProjekKerjaController;
@@ -243,7 +238,6 @@ Route::delete('/projek-kerja/{id}', [
 
 /*
 |--------------------------------------------------------------------------
-<<<<<<< HEAD
 | FORM → PDF
 |--------------------------------------------------------------------------
 */
