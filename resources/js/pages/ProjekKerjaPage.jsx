@@ -1,22 +1,52 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Download, Eye, Trash2 } from "lucide-react";
 
 export default function ProjekKerjaPage() {
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role;
   const divisiUser = user?.divisi;
 
+  // Get current divisi from URL path
+  // URL format: /super_admin/it/projek, /admin/service/projek, etc.
+  const getCurrentDivisi = () => {
+    const pathSegments = location.pathname.split('/');
+    const ProjekIndex = pathSegments.findIndex(seg => seg === 'projek');
+    if (ProjekIndex > 0) {
+      const divisiFromPath = pathSegments[ProjekIndex - 1];
+      // Convert to proper case (it -> IT, service -> Service, etc.)
+      const divisiMap = {
+        'it': 'IT',
+        'service': 'Service',
+        'kontraktor': 'Kontraktor',
+        'sales': 'Sales'
+      };
+      return divisiMap[divisiFromPath.toLowerCase()] || divisiFromPath;
+    }
+    return null;
+  };
+
+  const currentDivisi = getCurrentDivisi();
+
   useEffect(() => {
     if (!user) navigate("/");
   }, [user, navigate]);
 
+  // Set default divisi based on current page
+  const getDefaultDivisi = () => {
+    if (role === "super_admin" && currentDivisi) {
+      return currentDivisi;
+    }
+    return "";
+  };
+
   const initialForm = {
-    divisi: "",
+    divisi: getDefaultDivisi(),
     jenis_pekerjaan: "",
     karyawan: "",
     alamat: "",
@@ -43,18 +73,22 @@ export default function ProjekKerjaPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentDivisi]); // Re-fetch when divisi changes
 
   const fetchData = async () => {
     try {
       const res = await api.get("/projek-kerja");
       let data = res.data;
 
+      // Filter data berdasarkan role dan divisi yang sedang diakses
       if (role === "admin") {
-        data = data.filter(
-          (item) => item.divisi === divisiUser
-        );
+        // Admin hanya bisa lihat divisi miliknya
+        data = data.filter((item) => item.divisi === divisiUser);
+      } else if (role === "super_admin" && currentDivisi) {
+        // Super admin mengakses halaman divisi tertentu -> filter by divisi tersebut
+        data = data.filter((item) => item.divisi === currentDivisi);
       }
+      // Super admin di dashboard utama (tanpa divisi spesifik) -> lihat semua data
 
       setDataList(data);
 

@@ -48,6 +48,7 @@ export const usePdf = (user, currentDivisi = "IT") => {
 
   // ================= HISTORY DATA =================
   const [historyData, setHistoryData] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   // ================= HANDLERS =================
   const handleInputChange = (field, value) => {
@@ -270,8 +271,11 @@ export const usePdf = (user, currentDivisi = "IT") => {
   };
 
   const handleView = (item) => {
-    console.log("View item:", item);
-    alert(`Lihat detail:\nCustomer: ${item.customer}\nContact Person: ${item.contact_person || '-'}\nBrand: ${item.brand}\nModel: ${item.model}`);
+    setSelectedItem(item);
+  };
+
+  const closeViewModal = () => {
+    setSelectedItem(null);
   };
 
   const handleGeneratePDF = async (item) => {
@@ -343,6 +347,8 @@ export const usePdf = (user, currentDivisi = "IT") => {
     filteredHistory,
     fetchingHistory,
     serviceTypeOptions,
+    selectedItem,
+    setSelectedItem,
 
     // Handlers
     handleInputChange,
@@ -353,6 +359,7 @@ export const usePdf = (user, currentDivisi = "IT") => {
     resetForm,
     handleSubmit,
     handleView,
+    closeViewModal,
     handleGeneratePDF,
     fetchHistory,
   };

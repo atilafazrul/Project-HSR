@@ -42,10 +42,10 @@ export default function AdminDashboard({ user, logout }) {
   const [currentUser] = useState(user);
   const [dashboardData, setDashboardData] = useState([]);
 
+  const currentDivisi = user?.divisi || "Service";
+
   const navigate = useNavigate();
   const location = useLocation();
-
-  const currentDivisi = user?.divisi || "Service";
 
   /* ================= API ================= */
 
@@ -100,21 +100,8 @@ export default function AdminDashboard({ user, logout }) {
 
   /* ================= HELPER ================= */
 
-  const getDivisiPage = () => {
-    if (currentDivisi === "IT") return "/admin/it";
-    if (currentDivisi === "Service" || currentDivisi === "SERVICE") return "/admin/service";
-    if (currentDivisi === "Kontraktor") return "/admin/kontraktor";
-    if (currentDivisi === "Sales") return "/admin/sales";
-    return "/admin/service";
-  };
-
-  const getDivisiImage = () => {
-    if (currentDivisi === "IT") return "/images/it.jpg";
-    if (currentDivisi === "Service" || currentDivisi === "SERVICE") return "/images/service.jpg";
-    if (currentDivisi === "Kontraktor") return "/images/kontraktor.jpg";
-    if (currentDivisi === "Sales") return "/images/sales.jpg";
-    return "/images/service.jpg";
-  };
+  // Filter dashboard data based on user's divisi (admin only sees their divisi)
+  const filteredDashboardData = dashboardData.filter(item => item.divisi === currentDivisi);
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]">
@@ -152,52 +139,36 @@ export default function AdminDashboard({ user, logout }) {
               path="dashboard"
               element={
                 <>
-                  <h2 className="text-3xl font-bold mb-2">
+                  <h2 className="text-3xl font-bold mb-10">
                     Selamat Datang, {currentUser?.name}
                   </h2>
-
-                  <p className="text-gray-500 mb-10">
-                    Selamat datang di sistem HSR
-                  </p>
-
-                  <div className="bg-white rounded-3xl shadow p-8 mb-10">
-                    <h3 className="text-xl font-semibold mb-6">
-                      Divisi
-                    </h3>
-
-                    <DivisiCard
-                      title={currentDivisi}
-                      image={getDivisiImage()}
-                      onClick={() => navigate(getDivisiPage())}
-                    />
-                  </div>
 
                   <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
 
                     <SummaryCard
                       title="Total Tugas"
-                      value={dashboardData.length}
+                      value={filteredDashboardData.length}
                       icon={<ListTodo />}
                       color="blue"
                     />
 
                     <SummaryCard
                       title="Selesai"
-                      value={dashboardData.filter(d => d.status === "Selesai").length}
+                      value={filteredDashboardData.filter(d => d.status === "Selesai").length}
                       icon={<CheckCircle />}
                       color="green"
                     />
 
                     <SummaryCard
                       title="Proses"
-                      value={dashboardData.filter(d => d.status === "Proses").length}
+                      value={filteredDashboardData.filter(d => d.status === "Proses").length}
                       icon={<Clock />}
                       color="yellow"
                     />
 
                     <SummaryCard
                       title="Terlambat"
-                      value={dashboardData.filter(d => d.status === "Terlambat").length}
+                      value={filteredDashboardData.filter(d => d.status === "Terlambat").length}
                       icon={<AlertTriangle />}
                       color="red"
                     />
@@ -224,7 +195,7 @@ export default function AdminDashboard({ user, logout }) {
                       </thead>
 
                       <tbody>
-                        {dashboardData.map((item) => (
+                        {filteredDashboardData.map((item) => (
                           <ActivityRow
                             key={item.id}
                             divisi={item.divisi}
@@ -318,26 +289,6 @@ const SummaryCard = ({ title, value, icon, color }) => {
     </div>
   );
 };
-
-const DivisiCard = ({ title, image, onClick }) => (
-  <div
-    onClick={onClick}
-    className="relative rounded-3xl overflow-hidden shadow cursor-pointer group"
-  >
-    <img
-      src={image}
-      className="h-56 w-full object-cover group-hover:scale-110 transition"
-      alt={title}
-    />
-    <div className="absolute inset-0 bg-black/50"></div>
-    <div className="absolute bottom-0 p-6 text-white">
-      <h3 className="text-2xl font-bold">{title}</h3>
-      <button className="bg-white/20 px-4 py-2 rounded-xl mt-2">
-        Masuk →
-      </button>
-    </div>
-  </div>
-);
 
 const ActivityRow = ({ divisi, tugas, nama, lokasi, status, tanggal }) => {
   const map = {

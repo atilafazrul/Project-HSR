@@ -1,5 +1,20 @@
 import React from "react";
-import { Search, Filter, FileText, User, Eye, Download, MapPin } from "lucide-react";
+import { Search, Filter, FileText, User, Eye, Download, MapPin, X, Calendar, Wrench } from "lucide-react";
+
+// Format tanggal dari ISO string ke format yang lebih mudah dibaca
+const formatDate = (dateString) => {
+  if (!dateString) return "-";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return dateString;
+  }
+};
 
 export default function pdfHistory({
   historyData,
@@ -7,7 +22,9 @@ export default function pdfHistory({
   searchTerm,
   onSearchChange,
   onView,
+  closeViewModal,
   onGeneratePDF,
+  selectedItem,
 }) {
   return (
     <div className="space-y-6">
@@ -28,7 +45,6 @@ export default function pdfHistory({
           </div>
 
           <div className="flex items-center gap-2 text-gray-500">
-            <Filter size={18} />
             <span className="text-sm">{filteredHistory.length} dari {historyData.length} data</span>
           </div>
         </div>
@@ -82,8 +98,8 @@ export default function pdfHistory({
                     <td className="px-6 py-4 text-gray-600">{item.nama_teknisi}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${item.status === "Selesai"
-                          ? "bg-green-100 text-green-600"
-                          : "bg-yellow-100 text-yellow-600"
+                        ? "bg-green-100 text-green-600"
+                        : "bg-yellow-100 text-yellow-600"
                         }`}>
                         {item.status}
                       </span>
@@ -100,7 +116,7 @@ export default function pdfHistory({
                         <button
                           onClick={() => onGeneratePDF(item)}
                           className="p-2 rounded-lg text-green-600 hover:bg-green-50 transition"
-                          title="Generate PDF"
+                          title="Download PDF"
                         >
                           <Download size={18} />
                         </button>
@@ -113,6 +129,146 @@ export default function pdfHistory({
           </table>
         </div>
       </div>
+
+      {/* VIEW DETAIL MODAL */}
+      {selectedItem && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+
+            {/* MODAL HEADER */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <FileText className="text-white" size={24} />
+                <h2 className="text-xl font-bold text-white">Detail Service Report</h2>
+              </div>
+              <button
+                onClick={closeViewModal}
+                className="text-white hover:bg-white/20 p-2 rounded-full transition"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* MODAL CONTENT */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+
+              {/* CUSTOMER INFO */}
+              <div className="bg-gray-50 rounded-2xl p-5">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <User size={18} className="text-blue-600" />
+                  Informasi Customer
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Customer:</span>
+                    <span className="ml-2 font-medium">{selectedItem.customer || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Contact Person:</span>
+                    <span className="ml-2 font-medium">{selectedItem.contact_person || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Phone:</span>
+                    <span className="ml-2 font-medium">{selectedItem.phone || "-"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <MapPin size={14} className="text-gray-400 mr-1" />
+                    <span className="text-gray-500">Kota:</span>
+                    <span className="ml-2 font-medium">{selectedItem.kota || "-"}</span>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-gray-500 text-sm">Alamat:</span>
+                  <p className="mt-1 text-gray-900">{selectedItem.address || "-"}</p>
+                </div>
+              </div>
+
+              {/* DEVICE INFO */}
+              <div className="bg-gray-50 rounded-2xl p-5">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Wrench size={18} className="text-blue-600" />
+                  Informasi Perangkat
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Brand:</span>
+                    <span className="ml-2 font-medium">{selectedItem.brand || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Model:</span>
+                    <span className="ml-2 font-medium">{selectedItem.model || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Serial No:</span>
+                    <span className="ml-2 font-medium">{selectedItem.serial_no || "-"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* DATES */}
+              <div className="bg-gray-50 rounded-2xl p-5">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Calendar size={18} className="text-blue-600" />
+                  Tanggal & Teknisi
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Tanggal:</span>
+                    <span className="ml-2 font-medium">{formatDate(selectedItem.tanggal)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Start Date:</span>
+                    <span className="ml-2 font-medium">{formatDate(selectedItem.start_date)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Completed:</span>
+                    <span className="ml-2 font-medium">{formatDate(selectedItem.completed_date)}</span>
+                  </div>
+                  <div className="md:col-span-3">
+                    <span className="text-gray-500">Nama Teknisi:</span>
+                    <span className="ml-2 font-medium">{selectedItem.nama_teknisi || "-"}</span>
+                  </div>
+                  <div className="md:col-span-3">
+                    <span className="text-gray-500">Nama Client:</span>
+                    <span className="ml-2 font-medium">{selectedItem.nama_client || "-"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* DESCRIPTIONS */}
+              <div className="bg-gray-50 rounded-2xl p-5">
+                <h3 className="font-semibold text-gray-900 mb-3">Deskripsi</h3>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <span className="text-gray-500 block mb-1">Problem Description:</span>
+                    <p className="text-gray-900 bg-white p-3 rounded-lg border whitespace-pre-wrap">{selectedItem.problem_description || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block mb-1">Service Performed:</span>
+                    <p className="text-gray-900 bg-white p-3 rounded-lg border whitespace-pre-wrap">{selectedItem.service_performed || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block mb-1">Recommendation:</span>
+                    <p className="text-gray-900 bg-white p-3 rounded-lg border whitespace-pre-wrap">{selectedItem.recommendation || "-"}</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* MODAL FOOTER */}
+            <div className="border-t px-6 py-4 bg-gray-50 flex justify-end">
+              <button
+                onClick={closeViewModal}
+                className="px-8 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-medium transition"
+              >
+                Tutup
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

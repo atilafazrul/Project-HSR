@@ -32,6 +32,7 @@ export default function GeneratePDFPage({ user }) {
     filteredHistory,
     fetchingHistory,
     serviceTypeOptions,
+    selectedItem,
     handleInputChange,
     handleCheckboxChange,
     handlePartsChange,
@@ -40,6 +41,7 @@ export default function GeneratePDFPage({ user }) {
     resetForm,
     handleSubmit,
     handleView,
+    closeViewModal,
     handleGeneratePDF,
   } = usePdf(user, currentDivisi);
 
@@ -121,7 +123,9 @@ export default function GeneratePDFPage({ user }) {
               searchTerm,
               onSearchChange: setSearchTerm,
               onView: handleView,
+              closeViewModal,
               onGeneratePDF: handleGeneratePDF,
+              selectedItem,
             })
           )}
         </div>
