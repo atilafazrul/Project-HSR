@@ -320,24 +320,28 @@ const Dashboard = ({ user }) => {
 
           <DivisiCard
             title="Divisi IT"
+            image="/images/IT meet.jpg"
             count={projek.filter(p => p.divisi === "IT").length}
             onClick={() => navigate(`${basePath}/it`)}
           />
 
           <DivisiCard
             title="Divisi Service"
+            image="/images/Service Card.jpg"
             count={projek.filter(p => p.divisi === "Service").length}
             onClick={() => navigate(`${basePath}/service`)}
           />
 
           <DivisiCard
             title="Divisi Sales"
+            image="/images/Sales Card.jpg"
             count={projek.filter(p => p.divisi === "Sales").length}
             onClick={() => navigate(`${basePath}/sales`)}
           />
 
           <DivisiCard
             title="Divisi Kontraktor"
+            image="/images/Kontraktor Card.jpg"
             count={projek.filter(p => p.divisi === "Kontraktor").length}
             onClick={() => navigate(`${basePath}/kontraktor`)}
           />
@@ -362,241 +366,224 @@ const Dashboard = ({ user }) => {
       </div>
 
       {/* TABLE */}
-      {/* TABLE */}
-<div className="bg-white rounded-3xl shadow-md p-8">
+      
+        <div className="bg-white rounded-3xl shadow-md p-8">
 
-<h3 className="text-xl font-semibold mb-6">
-Aktivitas Pekerjaan
-</h3>
+          <h3 className="text-xl font-semibold mb-6">
+            Aktivitas Pekerjaan
+          </h3>
 
-{/* SEARCH + FILTER */}
-<div className="flex gap-4 mb-6 flex-wrap">
+      {/* SEARCH + FILTER */}
+        <div className="flex gap-4 mb-6 flex-wrap">
 
-<input
-type="text"
-placeholder="Cari..."
-value={search}
-onChange={(e) => setSearch(e.target.value)}
-className="border border-gray-200 px-4 py-2 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none w-64"
-/>
+          <input
+            type="text"
+            placeholder="Cari..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border border-gray-200 px-4 py-2 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none w-64"
+          />
 
-<select
-value={filterDivisi}
-onChange={(e) => setFilterDivisi(e.target.value)}
-className="border border-gray-200 px-4 py-2 rounded-xl"
->
-<option value="">Semua Divisi</option>
-<option value="IT">IT</option>
-<option value="Service">Service</option>
-<option value="Sales">Sales</option>
-<option value="Kontraktor">Kontraktor</option>
-</select>
+          <select
+            value={filterDivisi}
+            onChange={(e) => setFilterDivisi(e.target.value)}
+            className="border border-gray-200 px-4 py-2 rounded-xl"
+          >
+            <option value="">Semua Divisi</option>
+            <option value="IT">IT</option>
+            <option value="Service">Service</option>
+            <option value="Sales">Sales</option>
+            <option value="Kontraktor">Kontraktor</option>
+          </select>
 
-<select
-value={filterStatus}
-onChange={(e) => setFilterStatus(e.target.value)}
-className="border border-gray-200 px-4 py-2 rounded-xl"
->
-<option value="">Semua Status</option>
-<option value="Proses">Proses</option>
-<option value="Selesai">Selesai</option>
-<option value="Terlambat">Terlambat</option>
-</select>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="border border-gray-200 px-4 py-2 rounded-xl"
+          >
+            <option value="">Semua Status</option>
+            <option value="Proses">Proses</option>
+            <option value="Selesai">Selesai</option>
+            <option value="Terlambat">Terlambat</option>
+          </select>
 
-</div>
+        </div>
 
 {/* TABLE */}
-<div className="overflow-x-auto">
+      <div className="overflow-x-auto">
 
-<table className="w-full text-sm border-separate border-spacing-y-2">
+        <table className="w-full text-sm border-separate border-spacing-y-2">
+        <thead className="text-gray-500 text-xs uppercase bg-gray-50">
 
-<thead className="text-gray-500 text-xs uppercase bg-gray-50">
+      <tr className="text-left">
+      <th className="p-4">
+      <div className="flex items-center gap-2 opacity-80">
+        <Building size={15} className="text-gray-400"/>
+          Divisi
+      </div>
+      </th>
 
-<tr className="text-left">
+      <th className="p-4">
+      <div className="flex items-center gap-2 opacity-80">
+      <Briefcase size={15} className="text-gray-400"/>
+      Tugas
+      </div>
+      </th>
 
-<th className="p-4">
-<div className="flex items-center gap-2 opacity-80">
-<Building size={15} className="text-gray-400"/>
-Divisi
-</div>
-</th>
+      <th className="p-4">
+      <div className="flex items-center gap-2 opacity-80">
+      <User size={15} className="text-gray-400"/>
+      Karyawan
+      </div>
+      </th>
 
-<th className="p-4">
-<div className="flex items-center gap-2 opacity-80">
-<Briefcase size={15} className="text-gray-400"/>
-Tugas
-</div>
-</th>
+      <th className="p-4">
+      <div className="flex items-center gap-2 opacity-80">
+      <MapPin size={15} className="text-gray-400"/>
+      Lokasi
+      </div>
+      </th>
 
-<th className="p-4">
-<div className="flex items-center gap-2 opacity-80">
-<User size={15} className="text-gray-400"/>
-Karyawan
-</div>
-</th>
+      <th className="p-4">
+      <div className="flex items-center gap-2 opacity-80">
+      <Calendar size={15} className="text-gray-400"/>
+      Tanggal
+      </div>
+      </th>
 
-<th className="p-4">
-<div className="flex items-center gap-2 opacity-80">
-<MapPin size={15} className="text-gray-400"/>
-Lokasi
-</div>
-</th>
+      <th className="p-4">
+      <div className="flex items-center gap-2 opacity-80">
+      <FileText size={15} className="text-gray-400"/>
+      Deskripsi
+      </div>
+      </th>
 
-<th className="p-4">
-<div className="flex items-center gap-2 opacity-80">
-<Calendar size={15} className="text-gray-400"/>
-Tanggal
-</div>
-</th>
+      <th className="p-4">
+      <div className="flex items-center gap-2 opacity-80">
+      <Activity size={15} className="text-gray-400"/>
+      Status
+      </div>
+      </th>
 
-<th className="p-4">
-<div className="flex items-center gap-2 opacity-80">
-<FileText size={15} className="text-gray-400"/>
-Deskripsi
-</div>
-</th>
+      <th className="p-4 text-center">
+      <div className="flex items-center justify-center gap-2 opacity-80">
+      <Settings size={15} className="text-gray-400"/>
+      Aksi
+      </div>
+      </th>
 
-<th className="p-4">
-<div className="flex items-center gap-2 opacity-80">
-<Activity size={15} className="text-gray-400"/>
-Status
-</div>
-</th>
+      </tr>
 
-<th className="p-4 text-center">
-<div className="flex items-center justify-center gap-2 opacity-80">
-<Settings size={15} className="text-gray-400"/>
-Aksi
-</div>
-</th>
+      </thead>
 
-</tr>
+      <tbody>
+      {paginatedProjek.map(item => (
+      <tr key={item.id} className="bg-white shadow-sm hover:shadow-md transition">
 
-</thead>
+      <td className="p-4 text-left">
+      {item.divisi}
+      </td>
 
-<tbody>
+      <td className="p-4 font-medium text-left">
+      {item.jenis_pekerjaan}
+      </td>
 
-{paginatedProjek.map(item => (
+      <td className="p-4 text-left">
+      {item.karyawan}
+      </td>
 
-<tr key={item.id} className="bg-white shadow-sm hover:shadow-md transition">
+      <td className="p-4 text-left">
+      {item.alamat}
+      </td>
 
-<td className="p-4 text-left">
-{item.divisi}
-</td>
-
-<td className="p-4 font-medium text-left">
-{item.jenis_pekerjaan}
-</td>
-
-<td className="p-4 text-left">
-{item.karyawan}
-</td>
-
-<td className="p-4 text-left">
-{item.alamat}
-</td>
-
-<td className="p-4 text-left">
-{new Date(item.start_date).toLocaleDateString("id-ID")}
-</td>
+      <td className="p-4 text-left">
+      {new Date(item.start_date).toLocaleDateString("id-ID")}
+      </td>
 
 {/* DESKRIPSI */}
-<td className="p-4 text-left">
+        <td className="p-4 text-left">
 
-<button
-onClick={() => {
+        <button onClick={() => {
 
-setSelectedId(item.id);
-setDescText(item.problem_description || "");
-setEditDesc(false);
-setShowDesc(true);
+        setSelectedId(item.id);
+        setDescText(item.problem_description || "");
+        setEditDesc(false);
+        setShowDesc(true);
 
-}}
-className="px-3 py-1 rounded-lg text-xs border flex items-center gap-1 hover:bg-gray-100 transition"
->
+        }}
+        className="px-3 py-1 rounded-lg text-xs border flex items-center gap-1 hover:bg-gray-100 transition"
+        >
 
-<Eye size={14}/>
-<span>Lihat</span>
+        <Eye size={14}/>
+        <span>Lihat</span>
 
-</button>
+        </button>
 
-</td>
+        </td>
 
-{/* STATUS */}
-<td className="p-4 text-left">
+        {/* STATUS */}
+        <td className="p-4 text-left">
 
-<span
-className={`px-3 py-1 rounded-full text-xs font-semibold ${
-item.status === "Selesai"
-? "bg-green-100 text-green-600"
-: item.status === "Proses"
-? "bg-yellow-100 text-yellow-600"
-: "bg-red-100 text-red-600"
-}`}
->
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+            item.status === "Selesai" ? "bg-green-100 text-green-600": item.status === "Proses" ? "bg-yellow-100 text-yellow-600" : "bg-red-100 text-red-600"
+            }`}
+            >
+            {item.status}
 
-{item.status}
+            </span>
 
-</span>
-
-</td>
+        </td>
 
 {/* AKSI */}
-<td className="p-4">
+    <td className="p-4">
 
-<div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-2">
 
 {/* DOWNLOAD */}
-{item.file_url && (
+    {item.file_url && (
 
-<a
-href={item.file_url}
-target="_blank"
-rel="noreferrer"
-className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl shadow-sm transition"
->
+    <a
+    href={item.file_url} 
+    target="_blank"
+    rel="noreferrer"
+    className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl shadow-sm transition"
+    >
 
-<Download size={16}/>
+    <Download size={16}/>
 
-</a>
+    </a>
 
-)}
+    )}
 
 {/* FOTO PROJEK */}
-<button
-onClick={() =>
-navigate(`${basePath}/projek-kerja/foto/${item.id}`)
-}
-className="bg-green-600 hover:bg-green-700 text-white p-2.5 rounded-xl shadow-sm transition"
->
+    <button
+    onClick={() => navigate(`${basePath}/projek-kerja/foto/${item.id}`)
+    }
+    className="bg-green-600 hover:bg-green-700 text-white p-2.5 rounded-xl shadow-sm transition"
+    >
 
-<FileText size={16}/>
+    <FileText size={16}/>
 
-</button>
+    </button>
 
 {/* DELETE */}
-<button
-onClick={() => handleDelete(item.id)}
-className="bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-xl shadow-sm transition"
->
+    <button
+    onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-xl shadow-sm transition"
+    >
 
-<Trash2 size={16}/>
+    <Trash2 size={16}/>
 
-</button>
+    </button>
 
-</div>
+    </div>
 
-</td>
+        </td>
+        </tr>
+          ))}
+        </tbody>
+      </table>
 
-</tr>
-
-))}
-
-</tbody>
-
-</table>
-
-</div>
+    </div>
 
                {/* SLIDE */}
         <div className="flex justify-between mt-6">
@@ -641,10 +628,10 @@ className="bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-xl shadow-sm tra
 };
 
 /* CARD */
-const DivisiCard = ({ title, count, onClick }) => {
+const DivisiCard = ({ title, count, image, onClick }) => {
 
   const defaultImage =
-    "https://via.placeholder.com/400x300?text=Divisi";
+    image || "https://via.placeholder.com/400x300?text=Divisi";
 
   return (
 
@@ -799,4 +786,4 @@ const DeskripsiModal = ({
 
   );
 
-};
+};                                                                                                                                                                                                                                                                                                                                                                                                                            

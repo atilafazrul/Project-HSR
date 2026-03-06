@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { Plus, Package, Search } from "lucide-react";
+import { Plus, Package, Search, Eye, Pencil, Trash2 } from "lucide-react";
 
 export default function InventoryPage() {
 
@@ -59,7 +59,7 @@ export default function InventoryPage() {
 
       await axios.delete(`${API_URL}/api/barang/${id}`, {
         headers: {
-          role: role // 🔥 kirim role ke backend
+          role: role
         }
       });
 
@@ -171,7 +171,6 @@ export default function InventoryPage() {
               <th className="p-3 text-left">Stok</th>
               <th className="p-3 text-left">Keterangan</th>
               <th className="p-3 text-left">Lokasi</th>
-              <th className="p-3 text-left">Foto</th>
               <th className="p-3 text-left">Aksi</th>
             </tr>
           </thead>
@@ -180,7 +179,7 @@ export default function InventoryPage() {
 
             {filteredBarang.length === 0 ? (
               <tr>
-                <td colSpan="8" className="p-6 text-center text-gray-500">
+                <td colSpan="7" className="p-6 text-center text-gray-500">
                   Data tidak ditemukan
                 </td>
               </tr>
@@ -207,34 +206,39 @@ export default function InventoryPage() {
 
                   <td className="p-3">{b.lokasi}</td>
 
-                  <td className="p-3 text-center">
-                    {b.foto ? (
-                      <img
-                        src={`${API_URL}/${b.foto}`}
-                        alt="foto"
+                  {/* AKSI ICON */}
+                  <td className="p-3 flex items-center gap-4">
+
+                    {/* LIHAT FOTO */}
+                    {b.foto && (
+                      <button
                         onClick={() => setPreviewImage(`${API_URL}/${b.foto}`)}
-                        className="w-14 h-14 object-cover rounded mx-auto border cursor-pointer hover:scale-105 transition"
-                      />
-                    ) : "-"}
-                  </td>
+                        className="text-gray-600 hover:text-black"
+                        title="Lihat Foto"
+                      >
+                        <Eye size={18} />
+                      </button>
+                    )}
 
-                  <td className="p-3 flex gap-3">
-
+                    {/* EDIT */}
                     <button
                       onClick={() =>
                         navigate(`${basePath}/it/inventory/edit/${b.id}`)
                       }
-                      className="text-blue-600 hover:underline"
+                      className="text-blue-600 hover:text-blue-800"
+                      title="Edit"
                     >
-                      Edit
+                      <Pencil size={18} />
                     </button>
 
+                    {/* DELETE */}
                     {role === "super_admin" && (
                       <button
                         onClick={() => handleDelete(b.id)}
-                        className="text-red-600 hover:underline"
+                        className="text-red-600 hover:text-red-800"
+                        title="Hapus"
                       >
-                        Hapus
+                        <Trash2 size={18} />
                       </button>
                     )}
 
