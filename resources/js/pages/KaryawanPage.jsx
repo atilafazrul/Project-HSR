@@ -129,6 +129,7 @@ export default function KaryawanPage() {
             />
           </div>
 
+          {/* RESPONSIVE BUTTON */}
           <button
             onClick={() =>
               setCreateData({
@@ -138,9 +139,10 @@ export default function KaryawanPage() {
                 divisi: "",
               })
             }
-            className="px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-xl shadow hover:scale-105 transition"
+            className="flex items-center gap-2 px-4 sm:px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-xl shadow hover:scale-105 transition"
           >
-            + Tambah Karyawan
+            +
+            <span className="hidden sm:inline">Tambah Karyawan</span>
           </button>
 
         </div>
@@ -157,7 +159,6 @@ export default function KaryawanPage() {
             className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition duration-300 text-center border border-gray-100"
           >
 
-            {/* PHOTO */}
             <div className="relative mb-4">
 
               <img
@@ -172,14 +173,12 @@ export default function KaryawanPage() {
 
             </div>
 
-            {/* NAME */}
             <h4 className="font-semibold text-lg">{emp.name}</h4>
 
             <p className="text-gray-500 mb-5 text-sm">
               {emp.divisi || "-"}
             </p>
 
-            {/* ACTION */}
             <div className="flex justify-center gap-4">
 
               <button
@@ -211,7 +210,6 @@ export default function KaryawanPage() {
 
       </div>
 
-      {/* VIEW MODAL */}
       {selected && (
         <Modal onClose={() => setSelected(null)}>
 
@@ -249,7 +247,6 @@ export default function KaryawanPage() {
         </Modal>
       )}
 
-      {/* EDIT MODAL */}
       {editData && (
         <Modal onClose={() => setEditData(null)}>
           <h3 className="text-lg font-bold mb-4">Edit Data</h3>
@@ -302,7 +299,6 @@ export default function KaryawanPage() {
         </Modal>
       )}
 
-      {/* CREATE MODAL */}
       {createData && (
         <Modal onClose={() => setCreateData(null)}>
           <h3 className="text-lg font-bold mb-4">Tambah Karyawan</h3>
