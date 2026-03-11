@@ -13,22 +13,6 @@ export default defineConfig({
             refresh: true,
         }),
         react(),
-        tailwindcss(),
+        tailwindcss(), // WAJIB TAMBAH INI
     ],
-
-    server: {
-        host: '0.0.0.0',
-        port: 5173,
-        strictPort: true,
-
-        cors: true,
-
-        hmr: {
-            host: '192.168.1.28'
-        },
-
-        headers: {
-            "Access-Control-Allow-Origin": "*"
-        }
-    }
 })
