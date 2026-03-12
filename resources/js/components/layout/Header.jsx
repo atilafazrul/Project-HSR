@@ -10,7 +10,6 @@ export default function Header({
   sidebarOpen,
   setSidebarOpen,
 }) {
-
   const navigate = useNavigate();
 
   // Get photo URL
@@ -40,19 +39,23 @@ export default function Header({
     }
   };
 
+  const handleProfileClick = () => {
+    navigate(rolePath);
+  };
+
   return (
     <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center relative z-50">
-
       {/* LEFT SECTION: TOGGLE BUTTON */}
       <div className="flex items-center gap-4">
-
         {/* TOGGLE SIDEBAR (DESKTOP) */}
         {setSidebarExpanded && (
           <button
             onClick={toggleSidebar}
             className="hidden lg:flex items-center justify-center p-2 rounded-lg hover:bg-gray-100"
+            style={{ minWidth: "44px", minHeight: "44px", touchAction: "manipulation" }}
+            aria-label="Toggle sidebar"
           >
-            {sidebarExpanded ? <Menu size={20} /> : <Menu size={20} />}
+            <Menu size={20} />
           </button>
         )}
 
@@ -61,26 +64,33 @@ export default function Header({
           <button
             onClick={toggleMobileSidebar}
             className="lg:hidden flex items-center justify-center p-2 rounded-lg hover:bg-gray-100"
+            style={{ minWidth: "44px", minHeight: "44px", touchAction: "manipulation" }}
+            aria-label="Toggle mobile sidebar"
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         )}
-
       </div>
 
       <div className="flex items-center gap-4">
-
         {/* Bell */}
         {showBell && (
-          <Bell size={20} className="text-gray-600" />
+          <button
+            className="p-2 rounded-lg hover:bg-gray-100 relative"
+            style={{ minWidth: "44px", minHeight: "44px", touchAction: "manipulation" }}
+            aria-label="Notifications"
+          >
+            <Bell size={20} className="text-gray-600" />
+          </button>
         )}
 
-        {/* USER */}
-        <div
-          onDoubleClick={() => navigate(rolePath)}
-          className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-full cursor-pointer"
+        {/* USER - ubah dari onDoubleClick ke onClick */}
+        <button
+          onClick={handleProfileClick}
+          className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-full cursor-pointer hover:bg-gray-200 transition"
+          style={{ touchAction: "manipulation", minHeight: "44px" }}
+          aria-label="Profile"
         >
-
           {photoUrl ? (
             <img
               src={photoUrl}
@@ -92,12 +102,8 @@ export default function Header({
               {initialLetter}
             </div>
           )}
-
-          <span className="font-medium hidden sm:block">
-            {user?.name}
-          </span>
-
-        </div>
+          <span className="font-medium hidden sm:block">{user?.name}</span>
+        </button>
       </div>
     </header>
   );
