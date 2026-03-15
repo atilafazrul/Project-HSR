@@ -86,7 +86,7 @@ export default function Login({ setUser }) {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
 
       <h1 className="text-4xl font-semibold mb-6 text-center">
-        Manajemen Sistem
+        Management System
       </h1>
 
 
