@@ -24,7 +24,8 @@ class ProjekKerja extends Model
         'alamat',
         'status',
         'start_date',
-        'problem_description'
+        'problem_description',
+        'barang_dibeli' // <-- TAMBAHKAN INI
     ];
 
 

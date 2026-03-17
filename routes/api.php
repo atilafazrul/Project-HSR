@@ -276,6 +276,9 @@ Route::patch('/projek-kerja/{id}/deskripsi', [
     'updateDescription'
 ]);
 
+// Tambahkan route untuk update data projek secara keseluruhan
+Route::put('/projek-kerja/{id}', [ProjekKerjaController::class, 'update']);
+
 
 /*
 |--------------------------------------------------------------------------
