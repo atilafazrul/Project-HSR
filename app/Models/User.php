@@ -11,19 +11,17 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * Mass assignable attributes
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
      */
     protected $fillable = [
-
-        // ================= BASIC =================
         'name',
         'email',
         'password',
         'role',
         'divisi',
         'profile_photo',
-
-        // ================= DATA KTP =================
         'nik',
         'tempat_lahir',
         'tanggal_lahir',
@@ -32,20 +30,23 @@ class User extends Authenticatable
         'agama',
         'status_perkawinan',
         'pekerjaan',
-
-        // ================= KONTAK =================
         'no_telepon',
         'golongan_darah',
-
-        // ================= KONTAK DARURAT =================
         'kontak_darurat_nama',
         'kontak_darurat_hubungan',
         'kontak_darurat_telepon',
         'kontak_darurat_alamat',
+        'ktp',
+        'kk',
+        'akte',
+        'ijazah',
+        'sertifikat',
     ];
 
     /**
-     * Hidden attributes
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -53,12 +54,16 @@ class User extends Authenticatable
     ];
 
     /**
-     * Casting
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'tanggal_lahir' => 'date',
         'password' => 'hashed',
+        'ijazah' => 'array',
+        'sertifikat' => 'array',
     ];
 
     /**

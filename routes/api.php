@@ -196,6 +196,25 @@ Route::delete('/karyawan/{id}', [UserController::class, 'destroy']);
 
 /*
 |--------------------------------------------------------------------------
+| DOKUMEN KARYAWAN (ENCRYPTED)
+|--------------------------------------------------------------------------
+*/
+
+// Single file documents
+Route::get('/karyawan/{id}/ktp', [UserController::class, 'downloadKtp']);
+Route::get('/karyawan/{id}/kk', [UserController::class, 'downloadKk']);
+Route::get('/karyawan/{id}/akte', [UserController::class, 'downloadAkte']);
+
+// Multiple files documents
+Route::get('/karyawan/{id}/ijazah', [UserController::class, 'downloadIjazah']);
+Route::get('/karyawan/{id}/sertifikat', [UserController::class, 'downloadSertifikat']);
+
+// 🔥 DELETE FILE (untuk multiple files)
+Route::post('/karyawan/{id}/delete-file', [UserController::class, 'deleteFile']);
+
+
+/*
+|--------------------------------------------------------------------------
 | INVENTORY BARANG
 |--------------------------------------------------------------------------
 */
@@ -255,6 +274,7 @@ Route::delete('/pembelian/{id}', [
     PembelianController::class,
     'destroy'
 ]);
+
 
 /*
 |--------------------------------------------------------------------------
