@@ -32,7 +32,7 @@ export default function PembelianPage() {
 
   const fetchPembelian = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/pembelian");
+      const res = await axios.get("https://mansys.hsrsystem.com/api/pembelian");
       setDataList(res.data.data);
     } catch (error) {
       console.error("Gagal load pembelian:", error);
@@ -71,7 +71,7 @@ export default function PembelianPage() {
         formData.append("foto", form.foto);
       }
 
-      await axios.post("http://127.0.0.1:8000/api/pembelian", formData, {
+      await axios.post("https://mansys.hsrsystem.com/api/pembelian", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -108,7 +108,7 @@ export default function PembelianPage() {
       formData.append("harga", itemToUpdate.harga);
       formData.append("status", newStatus);
 
-      await axios.post(`http://127.0.0.1:8000/api/pembelian/${id}`, formData);
+      await axios.post(`https://mansys.hsrsystem.com/api/pembelian/${id}`, formData);
 
       setDataList((prev) =>
         prev.map((item) =>
@@ -126,7 +126,7 @@ export default function PembelianPage() {
 
     try {
       const user = JSON.parse(localStorage.getItem("user"));
-      await axios.delete(`http://127.0.0.1:8000/api/pembelian/${id}`, {
+      await axios.delete(`https://mansys.hsrsystem.com/api/pembelian/${id}`, {
         headers: {
           role: user?.role
         }
@@ -226,7 +226,7 @@ export default function PembelianPage() {
                         {item.foto ? (
                           <button
                             onClick={() => {
-                              setSelectedPhoto(`http://127.0.0.1:8000/${item.foto}`);
+                              setSelectedPhoto(`https://mansys.hsrsystem.com/${item.foto}`);
                               setShowPhotoModal(true);
                             }}
                             className="bg-blue-100 hover:bg-blue-200 text-blue-600 p-1.5 sm:p-2 rounded-lg transition"

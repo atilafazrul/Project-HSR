@@ -245,7 +245,7 @@ const Dashboard = ({ user, windowWidth }) => {
   const loadData = async () => {
     try {
       const res = await axios.get(
-        "http://127.0.0.1:8000/api/projek-kerja"
+        "https://mansys.hsrsystem.com/api/projek-kerja"
       );
 
       let data = res.data?.data || res.data || [];
@@ -272,7 +272,7 @@ const Dashboard = ({ user, windowWidth }) => {
 
     try {
       await axios.delete(
-        `http://127.0.0.1:8000/api/projek-kerja/${id}`
+        `https://mansys.hsrsystem.com/api/projek-kerja/${id}`
       );
       setProjek(prev => prev.filter(p => p.id !== id));
     } catch {
@@ -284,7 +284,7 @@ const Dashboard = ({ user, windowWidth }) => {
   const handleUpdateDesc = async () => {
     try {
       await axios.patch(
-        `http://127.0.0.1:8000/api/projek-kerja/${selectedId}/deskripsi`,
+        `https://mansys.hsrsystem.com/api/projek-kerja/${selectedId}/deskripsi`,
         {
           problem_description: descText
         }

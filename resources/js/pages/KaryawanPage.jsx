@@ -8,7 +8,32 @@ import {
   Trash2,
   UserPlus,
   Save,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  Download,
+  Shield,
+  Upload,
+  Camera,
+  Eye as EyeIcon,
+  Award,
+  GraduationCap,
+  User,
+  Heart,
+  Building2,
+  CheckCircle,
+  FolderOpen,
+  Users,
+  Plus,
+  Image,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Briefcase,
+  Home,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -23,6 +48,22 @@ export default function KaryawanPage() {
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState(null);
+
+  // State untuk file upload hanya untuk create dan edit photo
+  const [filePhoto, setFilePhoto] = useState(null);
+  
+  // State untuk accordion di modal edit
+  const [expandedSectionsEdit, setExpandedSectionsEdit] = useState({
+    personal: true,
+    emergency: false
+  });
+  
+  // State untuk accordion di modal detail
+  const [expandedSectionsDetail, setExpandedSectionsDetail] = useState({
+    personal: true,
+    emergency: false,
+    documents: true
+  });
 
   useEffect(() => {
     fetchData();
@@ -41,20 +82,12 @@ export default function KaryawanPage() {
     }
   };
 
-  // Helper function to format date for input type="date"
   const formatDateForInput = (dateString) => {
     if (!dateString) return "";
-    
-    // If it's already in YYYY-MM-DD format, return as is
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      return dateString;
-    }
-    
-    // Try to parse and format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return "";
-      
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
@@ -64,42 +97,48 @@ export default function KaryawanPage() {
     }
   };
 
+  const previewFile = (karyawanId, type, index = null) => {
+    let url = `/api/karyawan/${karyawanId}/${type}`;
+    if (index !== null) url += `?index=${index}`;
+    window.open(url, '_blank');
+  };
+
+  const downloadFile = (karyawanId, type, index = null) => {
+    let url = `/api/karyawan/${karyawanId}/${type}?download=true`;
+    if (index !== null) url += `&index=${index}`;
+    window.open(url, '_blank');
+  };
+
   const handleUpdate = async () => {
     try {
       setSaving(true);
       setError(null);
-      
-      // Hanya kirim field yang memiliki nilai
-      const payload = {};
-      
-      // Daftar field yang bisa diupdate
-      const fields = [
-        'name', 'nik', 'email', 'phone', 'no_telepon', 'alamat',
-        'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama',
-        'status_perkawinan', 'pekerjaan', 'golongan_darah',
-        'kontak_darurat_nama', 'kontak_darurat_hubungan', 
-        'kontak_darurat_telepon', 'kontak_darurat_alamat'
-      ];
-      
-      fields.forEach(field => {
-        if (editData[field] !== undefined && editData[field] !== null && editData[field] !== '') {
-          payload[field] = editData[field];
+
+      const formData = new FormData();
+
+      // Add all text fields only (no file fields)
+      Object.keys(editData).forEach(key => {
+        if (editData[key] !== undefined && editData[key] !== null && editData[key] !== '') {
+          // Skip all file fields
+          if (!['ktp', 'kk', 'akte', 'profile_photo', 'ijazah', 'sertifikat'].includes(key)) {
+            formData.append(key, editData[key]);
+          }
         }
       });
 
-      console.log("Mengirim payload:", payload);
+      // Only update photo if new one is selected
+      if (filePhoto) formData.append("profile_photo", filePhoto);
 
-      const res = await axios.put(`/api/karyawan/${editData.id}`, payload);
-      
-      console.log("Response:", res.data);
+      await axios.post(`/api/karyawan/${editData.id}?_method=PUT`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
       alert("Data berhasil disimpan ✅");
-      setEditData(null);
+      resetEditState();
       fetchData();
       
     } catch (err) {
       console.error("Error response:", err.response?.data);
-      
-      // Tampilkan error detail
       if (err.response?.data?.errors) {
         const errors = err.response.data.errors;
         const errorMessages = Object.values(errors).flat().join("\n");
@@ -107,10 +146,18 @@ export default function KaryawanPage() {
       } else {
         alert(err.response?.data?.message || "Gagal menyimpan data ❌");
       }
-      
     } finally {
       setSaving(false);
     }
+  };
+
+  const resetEditState = () => {
+    setFilePhoto(null);
+    setEditData(null);
+    setExpandedSectionsEdit({
+      personal: true,
+      emergency: false
+    });
   };
 
   const handleCreate = async () => {
@@ -118,7 +165,6 @@ export default function KaryawanPage() {
       setSaving(true);
       setError(null);
 
-      // Validasi sederhana
       if (!createData.name || !createData.email || !createData.password) {
         alert("Nama, Email, dan Password harus diisi!");
         setSaving(false);
@@ -127,7 +173,7 @@ export default function KaryawanPage() {
 
       await axios.post("/api/karyawan", {
         ...createData,
-        role: "admin" // Set default role
+        role: "admin"
       });
 
       alert("Karyawan berhasil ditambahkan ✅");
@@ -136,7 +182,6 @@ export default function KaryawanPage() {
 
     } catch (err) {
       console.error(err.response?.data || err.message);
-      
       if (err.response?.data?.errors) {
         const errors = err.response.data.errors;
         const errorMessages = Object.values(errors).flat().join("\n");
@@ -144,7 +189,6 @@ export default function KaryawanPage() {
       } else {
         alert(err.response?.data?.message || "Gagal menambahkan karyawan ❌");
       }
-      
     } finally {
       setSaving(false);
     }
@@ -152,7 +196,6 @@ export default function KaryawanPage() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Yakin ingin menghapus karyawan ini?")) return;
-
     try {
       await axios.delete(`/api/karyawan/${id}`);
       alert("Karyawan berhasil dihapus ✅");
@@ -170,488 +213,802 @@ export default function KaryawanPage() {
     emp.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const toggleSectionEdit = (section) => {
+    setExpandedSectionsEdit(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const toggleSectionDetail = (section) => {
+    setExpandedSectionsDetail(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   if (loading) {
     return (
-      <div className="p-10 flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-500">Memuat data karyawan...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-10 min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="p-4 sm:p-6 lg:p-8">
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-xl flex items-center gap-3">
+            <AlertCircle size={20} className="text-red-500" />
+            <span className="text-red-700 flex-1">{error}</span>
+            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+              <X size={18} />
+            </button>
+          </div>
+        )}
 
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center gap-2">
-          <AlertCircle size={20} />
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto">
-            <X size={18} />
-          </button>
-        </div>
-      )}
-
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
-            Dashboard Profil Karyawan
-          </h2>
-          <p className="text-gray-500 text-sm mt-1">
-            Kelola data lengkap seluruh karyawan
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-
-          {/* Search */}
-          <div className="relative flex-1 sm:flex-none">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Cari karyawan..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2.5 border rounded-xl text-sm w-full sm:w-[250px] bg-white shadow-sm focus:ring-2 focus:ring-purple-400 outline-none"
-            />
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
+              Kelola Karyawan
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">
+              Kelola data lengkap seluruh karyawan perusahaan
+            </p>
           </div>
 
-          {/* Add Button */}
-          <button
-            onClick={() =>
-              setCreateData({
-                name: "",
-                email: "",
-                password: "",
-                divisi: "",
-              })
-            }
-            className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
-          >
-            <UserPlus size={18} />
-            <span className="hidden sm:inline">Tambah Karyawan</span>
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cari karyawan..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm w-full sm:w-[280px] bg-white shadow-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none transition"
+              />
+            </div>
 
+            <button
+              onClick={() => setCreateData({ name: "", email: "", password: "", divisi: "" })}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 font-medium"
+            >
+              <UserPlus size={18} />
+              <span>Tambah Karyawan</span>
+            </button>
+          </div>
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <StatCard 
+            title="Total Karyawan" 
+            value={employees.length} 
+            icon={<Users size={20} />}
+            color="purple"
+          />
+          <StatCard 
+            title="Divisi Aktif" 
+            value={new Set(employees.map(e => e.divisi).filter(Boolean)).size} 
+            icon={<Building2 size={20} />}
+            color="blue"
+          />
+          <StatCard 
+            title="Dokumen Terupload" 
+            value={employees.reduce((total, emp) => {
+              let count = 0;
+              if (emp.ktp) count++;
+              if (emp.kk) count++;
+              if (emp.akte) count++;
+              if (emp.ijazah) count += emp.ijazah.length;
+              if (emp.sertifikat) count += emp.sertifikat.length;
+              return total + count;
+            }, 0)} 
+            icon={<FileText size={20} />}
+            color="green"
+          />
+        </div>
+
+        {/* Employee Grid */}
+        {filteredEmployees.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <FolderOpen size={64} className="mx-auto mb-4 text-gray-300" />
+            <p className="text-gray-500 text-lg">Tidak ada data karyawan</p>
+            <p className="text-gray-400 text-sm mt-1">Klik "Tambah Karyawan" untuk menambahkan data</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredEmployees.map((emp) => (
+              <EmployeeCard
+                key={emp.id}
+                employee={emp}
+                onView={() => setSelected(emp)}
+                onEdit={() => {
+                  const formattedData = {
+                    ...emp,
+                    tanggal_lahir: formatDateForInput(emp.tanggal_lahir),
+                  };
+                  setEditData(formattedData);
+                  setFilePhoto(null);
+                }}
+                onDelete={() => handleDelete(emp.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* GRID KARYAWAN */}
-      {filteredEmployees.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl shadow">
-          <p className="text-gray-500">Tidak ada data karyawan</p>
+      {/* Modal Detail - Dengan Accordion yang Rapi */}
+      {selected && (
+        <Modal onClose={() => setSelected(null)} title="Detail Karyawan" size="large">
+          <EmployeeDetailModal 
+            employee={selected} 
+            previewFile={previewFile} 
+            downloadFile={downloadFile}
+            expandedSections={expandedSectionsDetail}
+            toggleSection={toggleSectionDetail}
+          />
+        </Modal>
+      )}
+
+      {/* Modal Edit - Hanya untuk edit data teks */}
+      {editData && (
+        <Modal onClose={resetEditState} title="Edit Data Karyawan" size="large">
+          <EditEmployeeForm
+            editData={editData}
+            setEditData={setEditData}
+            filePhoto={filePhoto}
+            setFilePhoto={setFilePhoto}
+            handleUpdate={handleUpdate}
+            saving={saving}
+            onCancel={resetEditState}
+            expandedSections={expandedSectionsEdit}
+            toggleSection={toggleSectionEdit}
+          />
+        </Modal>
+      )}
+
+      {/* Modal Create */}
+      {createData && (
+        <Modal onClose={() => setCreateData(null)} title="Tambah Karyawan Baru">
+          <CreateEmployeeForm
+            createData={createData}
+            setCreateData={setCreateData}
+            handleCreate={handleCreate}
+            saving={saving}
+            onCancel={() => setCreateData(null)}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ================= STAT CARD COMPONENT =================
+const StatCard = ({ title, value, icon, color }) => {
+  const colors = {
+    purple: "bg-purple-50 text-purple-600",
+    blue: "bg-blue-50 text-blue-600",
+    green: "bg-green-50 text-green-600"
+  };
+  
+  return (
+    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-gray-500 text-sm">{title}</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredEmployees.map((emp) => (
-            <div
-              key={emp.id}
-              className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-center border border-gray-100"
-            >
-              <div className="relative mb-4">
-                <img
-                  src={
-                    emp.profile_photo
-                      ? `/storage/${emp.profile_photo}`
-                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name || "User")}&background=8B5CF6&color=fff&size=128`
-                  }
-                  className="w-24 h-24 mx-auto rounded-full border-4 border-purple-200 object-cover"
-                  alt={emp.name}
-                />
-              </div>
+        <div className={`p-3 rounded-full ${colors[color]}`}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+};
 
-              <h4 className="font-semibold text-lg truncate">{emp.name}</h4>
-              <p className="text-gray-500 mb-2 text-sm">{emp.divisi || "-"}</p>
-              <p className="text-gray-400 mb-4 text-xs">{emp.email}</p>
+// ================= EMPLOYEE CARD =================
+const EmployeeCard = ({ employee, onView, onEdit, onDelete }) => {
+  const getInitials = (name) => {
+    return name?.charAt(0)?.toUpperCase() || "U";
+  };
 
-              <div className="flex justify-center gap-3">
-                <button
-                  onClick={() => setSelected(emp)}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 transition"
-                  title="Lihat Detail"
-                >
-                  <Eye size={16} />
-                </button>
+  return (
+    <div className="bg-white rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
+      <div className="relative h-24 bg-gradient-to-r from-purple-500 to-purple-700">
+        <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
+          {employee.profile_photo ? (
+            <img
+              src={`/storage/${employee.profile_photo}`}
+              className="w-24 h-24 rounded-full border-4 border-white object-cover bg-white shadow-lg"
+              alt={employee.name}
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full border-4 border-white bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+              {getInitials(employee.name)}
+            </div>
+          )}
+        </div>
+      </div>
 
-                <button
-                  onClick={() => {
-                    // Format tanggal lahir untuk input
-                    const formattedData = {
-                      ...emp,
-                      tanggal_lahir: formatDateForInput(emp.tanggal_lahir)
-                    };
-                    setEditData(formattedData);
-                  }}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-purple-50 hover:bg-purple-100 text-purple-600 transition"
-                  title="Edit"
-                >
-                  <Pencil size={16} />
-                </button>
+      <div className="pt-14 pb-5 px-4 text-center">
+        <h4 className="font-bold text-gray-800 text-lg truncate">{employee.name}</h4>
+        <p className="text-purple-600 text-sm font-medium mt-1">{employee.divisi || "-"}</p>
+        <p className="text-gray-400 text-xs mt-1 truncate">{employee.email}</p>
+        
+        <div className="flex justify-center gap-2 mt-4">
+          <ActionButton icon={<Eye size={16} />} onClick={onView} color="blue" tooltip="Lihat Detail" />
+          <ActionButton icon={<Pencil size={16} />} onClick={onEdit} color="purple" tooltip="Edit" />
+          <ActionButton icon={<Trash2 size={16} />} onClick={onDelete} color="red" tooltip="Hapus" />
+        </div>
+      </div>
+    </div>
+  );
+};
 
-                <button
-                  onClick={() => handleDelete(emp.id)}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition"
-                  title="Hapus"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+const ActionButton = ({ icon, onClick, color, tooltip }) => {
+  const colors = {
+    blue: "bg-blue-50 hover:bg-blue-100 text-blue-600",
+    purple: "bg-purple-50 hover:bg-purple-100 text-purple-600",
+    red: "bg-red-50 hover:bg-red-100 text-red-600"
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-9 h-9 flex items-center justify-center rounded-full transition ${colors[color]}`}
+      title={tooltip}
+    >
+      {icon}
+    </button>
+  );
+};
+
+// ================= DETAIL MODAL CONTENT (RAPIH DENGAN ACCORDION) =================
+const EmployeeDetailModal = ({ employee, previewFile, downloadFile, expandedSections, toggleSection }) => {
+  // Data Pribadi Fields
+  const personalFields = [
+    { label: "NIK", value: employee.nik },
+    { label: "Email", value: employee.email },
+    { label: "No. Telepon", value: employee.phone || employee.no_telepon },
+    { label: "Tempat Lahir", value: employee.tempat_lahir },
+    { label: "Tanggal Lahir", value: employee.tanggal_lahir ? new Date(employee.tanggal_lahir).toLocaleDateString('id-ID') : "-" },
+    { label: "Jenis Kelamin", value: employee.jenis_kelamin },
+    { label: "Agama", value: employee.agama },
+    { label: "Status Perkawinan", value: employee.status_perkawinan },
+    { label: "Pekerjaan", value: employee.pekerjaan },
+    { label: "Golongan Darah", value: employee.golongan_darah },
+    { label: "Alamat", value: employee.alamat, fullWidth: true }
+  ];
+
+  // Kontak Darurat Fields
+  const emergencyFields = [
+    { label: "Nama", value: employee.kontak_darurat_nama },
+    { label: "Hubungan", value: employee.kontak_darurat_hubungan },
+    { label: "Telepon", value: employee.kontak_darurat_telepon },
+    { label: "Alamat", value: employee.kontak_darurat_alamat, fullWidth: true }
+  ];
+
+  // Dokumen Files
+  const documents = [
+    { type: "ktp", label: "KTP", file: employee.ktp, icon: <Shield size={14} /> },
+    { type: "kk", label: "Kartu Keluarga", file: employee.kk, icon: <Users size={14} /> },
+    { type: "akte", label: "Akte Kelahiran", file: employee.akte, icon: <FileText size={14} /> }
+  ];
+
+  // Hitung total dokumen
+  const totalDocuments = [
+    employee.ktp, employee.kk, employee.akte,
+    ...(employee.ijazah || []),
+    ...(employee.sertifikat || [])
+  ].filter(Boolean).length;
+
+  return (
+    <div className="space-y-4">
+      {/* Profile Header */}
+      <div className="text-center pb-4 border-b">
+        <img
+          src={
+            employee.profile_photo
+              ? `/storage/${employee.profile_photo}`
+              : `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name || "User")}&background=8B5CF6&color=fff&size=128`
+          }
+          className="w-28 h-28 mx-auto rounded-full border-4 border-purple-200 object-cover mb-3"
+          alt={employee.name}
+        />
+        <h3 className="text-xl font-bold text-gray-800">{employee.name}</h3>
+        <p className="text-purple-600 font-medium">{employee.divisi || "-"}</p>
+      </div>
+
+      {/* Accordion Sections */}
+      <AccordionSection
+        title="Data Pribadi"
+        icon={<User size={18} />}
+        expanded={expandedSections.personal}
+        onToggle={() => toggleSection('personal')}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {personalFields.map((field, idx) => (
+            <div key={idx} className={field.fullWidth ? "md:col-span-2" : ""}>
+              <InfoField label={field.label} value={field.value} />
             </div>
           ))}
         </div>
-      )}
+      </AccordionSection>
 
-      {/* MODAL DETAIL */}
-      {selected && (
-        <Modal onClose={() => setSelected(null)} title="Detail Karyawan">
-          <div className="text-center mb-6">
-            <img
-              src={
-                selected.profile_photo
-                  ? `/storage/${selected.profile_photo}`
-                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(selected.name)}&background=8B5CF6&color=fff&size=128`
-              }
-              className="w-28 h-28 mx-auto rounded-full border-4 border-purple-200 object-cover mb-3"
-              alt={selected.name}
-            />
-            <h3 className="text-xl font-bold">{selected.name}</h3>
-            <p className="text-gray-500">{selected.divisi || "-"}</p>
+      <AccordionSection
+        title="Kontak Darurat"
+        icon={<Heart size={18} />}
+        expanded={expandedSections.emergency}
+        onToggle={() => toggleSection('emergency')}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {emergencyFields.map((field, idx) => (
+            <div key={idx} className={field.fullWidth ? "md:col-span-2" : ""}>
+              <InfoField label={field.label} value={field.value} />
+            </div>
+          ))}
+        </div>
+      </AccordionSection>
+
+      <AccordionSection
+        title="Dokumen"
+        icon={<Shield size={18} />}
+        expanded={expandedSections.documents}
+        onToggle={() => toggleSection('documents')}
+        badge={totalDocuments}
+      >
+        <div className="space-y-4">
+          {/* Dokumen Identitas */}
+          <div>
+            <p className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
+              <Shield size={14} className="text-purple-500" />
+              Dokumen Identitas
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {documents.map((doc, idx) => doc.file && (
+                <DocumentCard
+                  key={idx}
+                  label={doc.label}
+                  filename={doc.file.split('/').pop()}
+                  icon={doc.icon}
+                  onPreview={() => previewFile(employee.id, doc.type)}
+                  onDownload={() => downloadFile(employee.id, doc.type)}
+                />
+              ))}
+            </div>
+            {!employee.ktp && !employee.kk && !employee.akte && (
+              <p className="text-gray-400 text-sm">Tidak ada dokumen identitas</p>
+            )}
           </div>
 
-          <div className="space-y-4">
-            {/* Data Pribadi */}
+          {/* Ijazah */}
+          {employee.ijazah && employee.ijazah.length > 0 && (
             <div>
-              <h4 className="font-semibold text-purple-700 mb-2">Data Pribadi</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <Info label="NIK" value={selected.nik} />
-                <Info label="Email" value={selected.email} />
-                <Info label="No. Telepon" value={selected.phone || selected.no_telepon} />
-                <Info label="Tempat Lahir" value={selected.tempat_lahir} />
-                <Info label="Tanggal Lahir" value={selected.tanggal_lahir ? new Date(selected.tanggal_lahir).toLocaleDateString('id-ID') : "-"} />
-                <Info label="Alamat" value={selected.alamat} />
-                <Info label="Jenis Kelamin" value={selected.jenis_kelamin} />
-                <Info label="Agama" value={selected.agama} />
-                <Info label="Status Perkawinan" value={selected.status_perkawinan} />
-                <Info label="Pekerjaan" value={selected.pekerjaan} />
-                <Info label="Golongan Darah" value={selected.golongan_darah} />
-              </div>
-            </div>
-
-            {/* Kontak Darurat */}
-            <div>
-              <h4 className="font-semibold text-purple-700 mb-2">Kontak Darurat</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <Info label="Nama Kontak Darurat" value={selected.kontak_darurat_nama} />
-                <Info label="Hubungan" value={selected.kontak_darurat_hubungan} />
-                <Info label="Telepon Kontak Darurat" value={selected.kontak_darurat_telepon} />
-                <Info label="Alamat Kontak Darurat" value={selected.kontak_darurat_alamat} />
-              </div>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* MODAL EDIT */}
-      {editData && (
-        <Modal onClose={() => setEditData(null)} title="Edit Data Karyawan">
-          <div className="space-y-6">
-            {/* Data Pribadi */}
-            <div>
-              <h4 className="font-semibold text-purple-700 mb-3">Data Pribadi</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <Input 
-                  label="Nama Lengkap" 
-                  value={editData.name}
-                  onChange={(v) => setEditData({ ...editData, name: v })} 
-                  required
-                />
-
-                <Input 
-                  label="NIK" 
-                  value={editData.nik}
-                  onChange={(v) => setEditData({ ...editData, nik: v })} 
-                />
-
-                <Input 
-                  label="Email" 
-                  type="email"
-                  value={editData.email}
-                  onChange={(v) => setEditData({ ...editData, email: v })} 
-                  required
-                />
-
-                <Input 
-                  label="Nomor Telepon" 
-                  value={editData.phone || editData.no_telepon}
-                  onChange={(v) => {
-                    setEditData({ 
-                      ...editData, 
-                      phone: v,
-                      no_telepon: v 
-                    });
-                  }} 
-                />
-
-                <Input 
-                  label="Tempat Lahir" 
-                  value={editData.tempat_lahir}
-                  onChange={(v) => setEditData({ ...editData, tempat_lahir: v })} 
-                />
-
-                <Input 
-                  label="Tanggal Lahir" 
-                  type="date"
-                  value={editData.tanggal_lahir || ""}
-                  onChange={(v) => setEditData({ ...editData, tanggal_lahir: v })} 
-                />
-
-                <div className="col-span-2">
-                  <Input 
-                    label="Alamat" 
-                    value={editData.alamat}
-                    onChange={(v) => setEditData({ ...editData, alamat: v })} 
+              <p className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
+                <GraduationCap size={14} className="text-purple-500" />
+                Ijazah ({employee.ijazah.length} file)
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {employee.ijazah.map((file, index) => (
+                  <DocumentCard
+                    key={`ijazah-${index}`}
+                    label={`Ijazah ${index + 1}`}
+                    filename={file.split('/').pop()}
+                    icon={<GraduationCap size={14} />}
+                    onPreview={() => previewFile(employee.id, 'ijazah', index)}
+                    onDownload={() => downloadFile(employee.id, 'ijazah', index)}
                   />
-                </div>
-
-                <Select
-                  label="Jenis Kelamin"
-                  value={editData.jenis_kelamin}
-                  onChange={(v) => setEditData({ ...editData, jenis_kelamin: v })}
-                  options={[
-                    { value: "", label: "Pilih Jenis Kelamin" },
-                    { value: "Laki-laki", label: "Laki-laki" },
-                    { value: "Perempuan", label: "Perempuan" }
-                  ]}
-                />
-
-                <Input 
-                  label="Agama" 
-                  value={editData.agama}
-                  onChange={(v) => setEditData({ ...editData, agama: v })} 
-                />
-
-                <Select
-                  label="Status Perkawinan"
-                  value={editData.status_perkawinan}
-                  onChange={(v) => setEditData({ ...editData, status_perkawinan: v })}
-                  options={[
-                    { value: "", label: "Pilih Status" },
-                    { value: "Belum Kawin", label: "Belum Kawin" },
-                    { value: "Kawin", label: "Kawin" },
-                    { value: "Cerai", label: "Cerai" },
-                    { value: "Cerai Mati", label: "Cerai Mati" }
-                  ]}
-                />
-
-                <Input 
-                  label="Pekerjaan" 
-                  value={editData.pekerjaan}
-                  onChange={(v) => setEditData({ ...editData, pekerjaan: v })} 
-                />
-
-                <Select
-                  label="Golongan Darah"
-                  value={editData.golongan_darah}
-                  onChange={(v) => setEditData({ ...editData, golongan_darah: v })}
-                  options={[
-                    { value: "", label: "Pilih Golongan" },
-                    { value: "A", label: "A" },
-                    { value: "B", label: "B" },
-                    { value: "AB", label: "AB" },
-                    { value: "O", label: "O" }
-                  ]}
-                />
+                ))}
               </div>
             </div>
+          )}
 
-            {/* Kontak Darurat */}
+          {/* Sertifikat */}
+          {employee.sertifikat && employee.sertifikat.length > 0 && (
             <div>
-              <h4 className="font-semibold text-purple-700 mb-3">Kontak Darurat</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <Input 
-                  label="Nama Kontak Darurat" 
-                  value={editData.kontak_darurat_nama}
-                  onChange={(v) => setEditData({ ...editData, kontak_darurat_nama: v })} 
-                />
-
-                <Input 
-                  label="Hubungan" 
-                  value={editData.kontak_darurat_hubungan}
-                  onChange={(v) => setEditData({ ...editData, kontak_darurat_hubungan: v })} 
-                />
-
-                <Input 
-                  label="Telepon Kontak Darurat" 
-                  value={editData.kontak_darurat_telepon}
-                  onChange={(v) => setEditData({ ...editData, kontak_darurat_telepon: v })} 
-                />
-
-                <div className="col-span-2">
-                  <Input 
-                    label="Alamat Kontak Darurat" 
-                    value={editData.kontak_darurat_alamat}
-                    onChange={(v) => setEditData({ ...editData, kontak_darurat_alamat: v })} 
+              <p className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
+                <Award size={14} className="text-purple-500" />
+                Sertifikat ({employee.sertifikat.length} file)
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {employee.sertifikat.map((file, index) => (
+                  <DocumentCard
+                    key={`sertifikat-${index}`}
+                    label={`Sertifikat ${index + 1}`}
+                    filename={file.split('/').pop()}
+                    icon={<Award size={14} />}
+                    onPreview={() => previewFile(employee.id, 'sertifikat', index)}
+                    onDownload={() => downloadFile(employee.id, 'sertifikat', index)}
                   />
-                </div>
+                ))}
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="flex gap-2 mt-6">
-            <button
-              onClick={handleUpdate}
-              disabled={saving}
-              className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-xl hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <Save size={18} />
-              {saving ? "Menyimpan..." : "Simpan Perubahan"}
-            </button>
-            <button
-              onClick={() => setEditData(null)}
-              className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition"
-            >
-              Batal
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {/* MODAL CREATE */}
-      {createData && (
-        <Modal onClose={() => setCreateData(null)} title="Tambah Karyawan Baru">
-          <div className="space-y-4">
-            <Input 
-              label="Nama Lengkap" 
-              value={createData.name}
-              onChange={(v) => setCreateData({ ...createData, name: v })} 
-              required
-              placeholder="Masukkan nama lengkap"
-            />
-
-            <Input 
-              label="Email" 
-              type="email"
-              value={createData.email}
-              onChange={(v) => setCreateData({ ...createData, email: v })} 
-              required
-              placeholder="contoh@email.com"
-            />
-
-            <Input 
-              label="Password" 
-              type="password"
-              value={createData.password}
-              onChange={(v) => setCreateData({ ...createData, password: v })} 
-              required
-              placeholder="Minimal 6 karakter"
-            />
-
-            <Select
-              label="Divisi"
-              value={createData.divisi}
-              onChange={(v) => setCreateData({ ...createData, divisi: v })}
-              options={[
-                { value: "", label: "Pilih Divisi" },
-                { value: "IT", label: "IT" },
-                { value: "Service", label: "Service" },
-                { value: "Sales", label: "Sales" },
-                { value: "Kontraktor", label: "Kontraktor" },
-                { value: "Logistik", label: "Logistik" },
-                { value: "Purchasing", label: "Purchasing" }
-              ]}
-            />
-          </div>
-
-          <div className="flex gap-2 mt-6">
-            <button
-              onClick={handleCreate}
-              disabled={saving}
-              className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-xl hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <UserPlus size={18} />
-              {saving ? "Menyimpan..." : "Tambah Karyawan"}
-            </button>
-            <button
-              onClick={() => setCreateData(null)}
-              className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition"
-            >
-              Batal
-            </button>
-          </div>
-        </Modal>
-      )}
-
+          {totalDocuments === 0 && (
+            <div className="text-center py-8">
+              <FileText size={48} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-gray-400">Tidak ada dokumen</p>
+            </div>
+          )}
+        </div>
+      </AccordionSection>
     </div>
   );
-}
+};
 
-// ================= COMPONENTS =================
+// ================= EDIT FORM =================
+const EditEmployeeForm = ({
+  editData,
+  setEditData,
+  filePhoto,
+  setFilePhoto,
+  handleUpdate,
+  saving,
+  onCancel,
+  expandedSections,
+  toggleSection
+}) => {
+  const personalFields = [
+    { label: "Nama Lengkap", key: "name", type: "text", required: true },
+    { label: "NIK", key: "nik", type: "text" },
+    { label: "Email", key: "email", type: "email", required: true },
+    { label: "Nomor Telepon", key: "phone", type: "tel", altKey: "no_telepon" },
+    { label: "Tempat Lahir", key: "tempat_lahir", type: "text" },
+    { label: "Tanggal Lahir", key: "tanggal_lahir", type: "date" },
+    { label: "Jenis Kelamin", key: "jenis_kelamin", type: "select", options: ["Laki-laki", "Perempuan"] },
+    { label: "Agama", key: "agama", type: "text" },
+    { label: "Status Perkawinan", key: "status_perkawinan", type: "select", options: ["Belum Kawin", "Kawin", "Cerai", "Cerai Mati"] },
+    { label: "Pekerjaan", key: "pekerjaan", type: "text" },
+    { label: "Golongan Darah", key: "golongan_darah", type: "select", options: ["A", "B", "AB", "O"] },
+    { label: "Alamat", key: "alamat", type: "textarea", fullWidth: true }
+  ];
 
-function Info({ label, value }) {
+  const emergencyFields = [
+    { label: "Nama Kontak Darurat", key: "kontak_darurat_nama", type: "text" },
+    { label: "Hubungan", key: "kontak_darurat_hubungan", type: "text" },
+    { label: "Telepon Kontak Darurat", key: "kontak_darurat_telepon", type: "tel" },
+    { label: "Alamat Kontak Darurat", key: "kontak_darurat_alamat", type: "textarea", fullWidth: true }
+  ];
+
+  const handleFieldChange = (key, value, altKey = null) => {
+    setEditData({ ...editData, [key]: value });
+    if (altKey) {
+      setEditData(prev => ({ ...prev, [altKey]: value }));
+    }
+  };
+
   return (
-    <div className="bg-gray-50 p-3 rounded-lg">
-      <p className="text-gray-400 text-xs">{label}</p>
-      <p className="font-medium break-words">{value || "-"}</p>
+    <div className="space-y-4">
+      {/* Photo Upload */}
+      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-xl">
+        <div className="flex items-center gap-4">
+          <img
+            src={
+              filePhoto 
+                ? URL.createObjectURL(filePhoto)
+                : editData.profile_photo
+                  ? `/storage/${editData.profile_photo}`
+                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(editData.name || "User")}&background=8B5CF6&color=fff&size=128`
+            }
+            className="w-16 h-16 rounded-full border-2 border-purple-300 object-cover shadow-md"
+            alt="Profile"
+          />
+          <div>
+            <FileUploadSimple
+              label="Ganti Foto"
+              file={filePhoto}
+              onFileChange={setFilePhoto}
+              icon={<Camera size={14} />}
+            />
+            <p className="text-xs text-gray-400 mt-1">JPG, PNG (Max 2MB)</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Accordion Sections */}
+      <AccordionSection
+        title="Data Pribadi"
+        icon={<User size={18} />}
+        expanded={expandedSections.personal}
+        onToggle={() => toggleSection('personal')}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {personalFields.map((field, idx) => (
+            <div key={idx} className={field.fullWidth ? "md:col-span-2" : ""}>
+              <FormField
+                label={field.label}
+                value={editData[field.key] || ""}
+                onChange={(v) => handleFieldChange(field.key, v, field.altKey)}
+                type={field.type}
+                options={field.options}
+                required={field.required}
+              />
+            </div>
+          ))}
+        </div>
+      </AccordionSection>
+
+      <AccordionSection
+        title="Kontak Darurat"
+        icon={<Heart size={18} />}
+        expanded={expandedSections.emergency}
+        onToggle={() => toggleSection('emergency')}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {emergencyFields.map((field, idx) => (
+            <div key={idx} className={field.fullWidth ? "md:col-span-2" : ""}>
+              <FormField
+                label={field.label}
+                value={editData[field.key] || ""}
+                onChange={(v) => setEditData({ ...editData, [field.key]: v })}
+                type={field.type}
+              />
+            </div>
+          ))}
+        </div>
+      </AccordionSection>
+
+      {/* Note about documents */}
+      <div className="bg-blue-50 rounded-xl p-3 flex items-center gap-2">
+        <FileText size={14} className="text-blue-500" />
+        <p className="text-xs text-blue-700">
+          Untuk melihat dan mengunduh dokumen (KTP, KK, Ijazah, dll), silakan buka halaman Detail Karyawan.
+        </p>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 pt-4 border-t mt-4">
+        <button
+          onClick={handleUpdate}
+          disabled={saving}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-3 rounded-xl hover:from-purple-600 hover:to-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+        >
+          <Save size={18} />
+          {saving ? "Menyimpan..." : "Simpan Perubahan"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+        >
+          Batal
+        </button>
+      </div>
     </div>
   );
-}
+};
 
-function Input({ label, value, onChange, type = "text", placeholder, required }) {
+// ================= ACCORDION SECTION COMPONENT =================
+const AccordionSection = ({ title, icon, children, expanded, onToggle, badge }) => {
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-purple-600">{icon}</span>
+          <h4 className="font-semibold text-gray-800">{title}</h4>
+          {badge !== undefined && badge > 0 && (
+            <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-xs rounded-full">
+              {badge}
+            </span>
+          )}
+        </div>
+        {expanded ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+      </button>
+      {expanded && (
+        <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ================= CREATE FORM =================
+const CreateEmployeeForm = ({ createData, setCreateData, handleCreate, saving, onCancel }) => {
+  return (
+    <div className="space-y-5">
+      <FormField
+        label="Nama Lengkap"
+        value={createData.name}
+        onChange={(v) => setCreateData({ ...createData, name: v })}
+        type="text"
+        required
+        placeholder="Masukkan nama lengkap"
+      />
+      <FormField
+        label="Email"
+        value={createData.email}
+        onChange={(v) => setCreateData({ ...createData, email: v })}
+        type="email"
+        required
+        placeholder="contoh@email.com"
+      />
+      <FormField
+        label="Password"
+        value={createData.password}
+        onChange={(v) => setCreateData({ ...createData, password: v })}
+        type="password"
+        required
+        placeholder="Minimal 6 karakter"
+      />
+      <FormField
+        label="Divisi"
+        value={createData.divisi}
+        onChange={(v) => setCreateData({ ...createData, divisi: v })}
+        type="select"
+        options={["IT", "Service", "Sales", "Kontraktor", "Logistik", "Purchasing"]}
+      />
+
+      <div className="flex gap-3 pt-4 border-t">
+        <button
+          onClick={handleCreate}
+          disabled={saving}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-3 rounded-xl hover:from-purple-600 hover:to-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+        >
+          <UserPlus size={18} />
+          {saving ? "Menyimpan..." : "Tambah Karyawan"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+        >
+          Batal
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ================= REUSABLE COMPONENTS =================
+
+const InfoField = ({ label, value }) => (
+  <div className="bg-white p-3 rounded-lg border border-gray-100 hover:shadow-sm transition">
+    <p className="text-gray-400 text-xs mb-1">{label}</p>
+    <p className="font-medium text-gray-700 break-words">{value || "-"}</p>
+  </div>
+);
+
+const FormField = ({ label, value, onChange, type = "text", options, required, placeholder }) => {
+  if (type === "select") {
+    return (
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <select
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full p-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none transition bg-white"
+        >
+          <option value="">Pilih {label}</option>
+          {options.map((opt, idx) => (
+            <option key={idx} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+  
+  if (type === "textarea") {
+    return (
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <textarea
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          rows={2}
+          placeholder={placeholder}
+          className="w-full p-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none transition"
+        />
+      </div>
+    );
+  }
+  
   return (
     <div>
-      <p className="text-gray-400 text-xs mb-1">
+      <label className="block text-xs font-medium text-gray-500 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
-      </p>
+      </label>
       <input
         type={type}
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="border p-2.5 w-full rounded-lg text-sm focus:ring-2 focus:ring-purple-400 outline-none transition"
+        className="w-full p-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none transition"
       />
     </div>
   );
-}
+};
 
-function Select({ label, value, onChange, options }) {
+const FileUploadSimple = ({ label, file, onFileChange, icon }) => {
   return (
     <div>
-      <p className="text-gray-400 text-xs mb-1">{label}</p>
-      <select
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="border p-2.5 w-full rounded-lg text-sm focus:ring-2 focus:ring-purple-400 outline-none transition bg-white"
-      >
-        {options.map((opt, idx) => (
-          <option key={idx} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <label className="cursor-pointer">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition text-sm">
+          {icon}
+          <span className="text-gray-600 truncate max-w-[120px]">{file ? file.name : label}</span>
+        </div>
+        <input
+          type="file"
+          accept=".jpg,.jpeg,.png"
+          onChange={(e) => onFileChange(e.target.files[0])}
+          className="hidden"
+        />
+      </label>
     </div>
   );
-}
+};
 
-function Modal({ children, onClose, title }) {
+const DocumentCard = ({ label, filename, icon, onPreview, onDownload }) => (
+  <div className="bg-gray-50 rounded-lg p-3 flex items-center justify-between group hover:bg-gray-100 transition border border-gray-100">
+    <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-gray-700">{label}</p>
+        <p className="text-[10px] text-gray-400 truncate">{filename}</p>
+      </div>
+    </div>
+    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+      <button
+        onClick={onPreview}
+        className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+        title="Lihat"
+      >
+        <EyeIcon size={12} />
+      </button>
+      <button
+        onClick={onDownload}
+        className="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+        title="Download"
+      >
+        <Download size={12} />
+      </button>
+    </div>
+  </div>
+);
+
+const Modal = ({ children, onClose, title, size = "default" }) => {
+  const sizeClasses = {
+    default: "max-w-2xl",
+    large: "max-w-3xl"
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-      <div className="bg-white p-6 rounded-2xl w-full max-w-3xl relative shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4 sticky top-0 bg-white pb-2">
-          <h3 className="text-lg font-bold">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded-full transition"
-          >
-            <X size={20} />
-          </button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+      <div className={`bg-white rounded-2xl w-full ${sizeClasses[size]} relative shadow-2xl max-h-[90vh] flex flex-col`}>
+        <div className="p-4 border-b sticky top-0 bg-white rounded-t-2xl z-10">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
+              {title}
+            </h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-full transition"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
-        {children}
+        <div className="p-5 overflow-y-auto flex-1">
+          {children}
+        </div>
       </div>
     </div>
   );
-}
+};
