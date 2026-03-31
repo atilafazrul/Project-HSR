@@ -165,8 +165,11 @@ export default function ProjekKerjaPage() {
       setForm(initialForm);
       fetchData();
     } catch (err) {
-      console.error(err);
-      alert("Gagal simpan data");
+      console.error("Error response:", err.response?.data);
+      const errorMsg = err.response?.data?.message || 
+                       (err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join("\n") : null) ||
+                       "Gagal simpan data";
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }
