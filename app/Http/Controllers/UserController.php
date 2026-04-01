@@ -7,9 +7,41 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class UserController extends Controller
 {
+    // ================= HELPER: GET USER FROM TOKEN =================
+    private function getUserFromToken($token)
+    {
+        try {
+            $tokenModel = PersonalAccessToken::findToken($token);
+            if (!$tokenModel) {
+                return null;
+            }
+            return $tokenModel->tokenable;
+        } catch (\Exception $e) {
+            \Log::error('Get user from token error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    // ================= HELPER: AUTHORIZATION DOWNLOAD ACCESS =================
+    private function canAccessEmployeeDocument($authenticatedUser, $targetUserId)
+    {
+        if (!$authenticatedUser) {
+            return false;
+        }
+
+        // User boleh akses dokumen miliknya sendiri
+        if ((int) $authenticatedUser->id === (int) $targetUserId) {
+            return true;
+        }
+
+        // Role tertentu boleh akses dokumen seluruh karyawan
+        return in_array($authenticatedUser->role, ['admin', 'super_admin'], true);
+    }
+
     // ================= LIST =================
     public function index()
     {
@@ -35,6 +67,116 @@ class UserController extends Controller
         return response()->json($user);
     }
 
+    // ================= GET PROFILE =================
+    public function getProfile(Request $request)
+    {
+        $user = User::find($request->query('user_id'));
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak ditemukan'
+            ], 404);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'user' => $user
+        ]);
+    }
+
+    // ================= UPDATE PROFILE =================
+    public function updateProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer',
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'no_telepon' => 'nullable|string|max:20',
+            'alamat' => 'nullable|string'
+        ]);
+
+        $user = User::find($validated['user_id']);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak ditemukan'
+            ], 404);
+        }
+
+        $updateData = array_filter($validated, function($key) {
+            return in_array($key, ['name', 'email', 'phone', 'no_telepon', 'alamat']);
+        }, ARRAY_FILTER_USE_KEY);
+
+        $user->update($updateData);
+        $user->refresh();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile berhasil diupdate',
+            'user' => $user
+        ]);
+    }
+
+    // ================= UPDATE PROFILE PHOTO =================
+    public function updateProfilePhoto(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer',
+            'photo' => 'required|image|max:2048'
+        ]);
+
+        $user = User::find($validated['user_id']);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak ditemukan'
+            ], 404);
+        }
+
+        if ($user->profile_photo && Storage::disk('public')->exists($user->profile_photo)) {
+            Storage::disk('public')->delete($user->profile_photo);
+        }
+
+        $path = $request->file('photo')->store('profile-photos', 'public');
+
+        $user->profile_photo = $path;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'profile_photo' => $path
+        ]);
+    }
+
+    // ================= DELETE PROFILE PHOTO =================
+    public function deleteProfilePhoto(Request $request)
+    {
+        $user = User::find($request->user_id);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak ditemukan'
+            ], 404);
+        }
+
+        if ($user->profile_photo && Storage::disk('public')->exists($user->profile_photo)) {
+            Storage::disk('public')->delete($user->profile_photo);
+        }
+
+        $user->profile_photo = null;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Foto berhasil dihapus'
+        ]);
+    }
+
     // ================= CREATE =================
     public function store(Request $request)
     {
@@ -45,9 +187,6 @@ class UserController extends Controller
             'divisi' => 'nullable|string',
             'password' => 'required|min:6'
         ]);
-
-        // 🔥 JANGAN HASH MANUAL – cast 'hashed' akan menangani
-        // $validated['password'] = Hash::make($validated['password']);
 
         return response()->json(User::create($validated));
     }
@@ -61,51 +200,37 @@ class UserController extends Controller
             'nik' => 'nullable|string|max:20',
             'name' => 'nullable|string|max:255',
             'email' => 'nullable|email',
-
             'phone' => 'nullable|string|max:20',
             'no_telepon' => 'nullable|string|max:20',
-
             'alamat' => 'nullable|string',
             'tempat_lahir' => 'nullable|string',
             'tanggal_lahir' => 'nullable|date',
-
             'jenis_kelamin' => 'nullable|string',
             'agama' => 'nullable|string',
             'status_perkawinan' => 'nullable|string',
-
             'pekerjaan' => 'nullable|string',
             'golongan_darah' => 'nullable|string',
-
             'kontak_darurat_nama' => 'nullable|string',
             'kontak_darurat_hubungan' => 'nullable|string',
             'kontak_darurat_telepon' => 'nullable|string|max:20',
             'kontak_darurat_alamat' => 'nullable|string',
-
-            // Password opsional
             'password' => 'nullable|string|min:6',
-
-            // Single files
             'ktp' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'kk' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'akte' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-
-            // Multiple files (array)
             'ijazah.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'sertifikat.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
-        // 🔥 HAPUS ijazah dan sertifikat dari validated
         unset($validated['ijazah']);
         unset($validated['sertifikat']);
 
-        // 🔥 JANGAN HASH MANUAL – biarkan cast 'hashed' yang meng-hash
         if ($request->filled('password')) {
-            $validated['password'] = $request->password; // plain text
+            $validated['password'] = $request->password;
         } else {
             unset($validated['password']);
         }
 
-        // sync phone
         if ($request->has('no_telepon') && !$request->has('phone')) {
             $validated['phone'] = $request->no_telepon;
         }
@@ -116,16 +241,13 @@ class UserController extends Controller
 
         $user->fill($validated);
 
-        // ================= ENCRYPT FUNCTION =================
         $saveEncrypted = function ($file, $prefix) {
             try {
                 $content = file_get_contents($file->getRealPath());
                 $encrypted = Crypt::encrypt($content);
                 $filename = $prefix . '_' . time() . '_' . uniqid() . '.enc';
                 $path = 'secure/' . $filename;
-
                 Storage::disk('public')->put($path, $encrypted);
-
                 return $path;
             } catch (\Exception $e) {
                 \Log::error('Error encrypt file: ' . $e->getMessage());
@@ -133,7 +255,6 @@ class UserController extends Controller
             }
         };
 
-        // ================= SINGLE FILE UPLOADS (REPLACE) =================
         if ($request->hasFile('ktp')) {
             if ($user->ktp && Storage::disk('public')->exists($user->ktp)) {
                 Storage::disk('public')->delete($user->ktp);
@@ -155,7 +276,6 @@ class UserController extends Controller
             $user->akte = $saveEncrypted($request->file('akte'), 'akte');
         }
 
-        // 🔥 MULTIPLE FILES - Ijazah (TAMBAHKAN)
         if ($request->hasFile('ijazah')) {
             $existingIjazah = [];
             $rawIjazah = $user->getOriginal('ijazah');
@@ -183,7 +303,6 @@ class UserController extends Controller
             $user->ijazah = $existingIjazah;
         }
 
-        // 🔥 MULTIPLE FILES - Sertifikat (TAMBAHKAN)
         if ($request->hasFile('sertifikat')) {
             $existingSertifikat = [];
             $rawSertifikat = $user->getOriginal('sertifikat');
@@ -308,48 +427,117 @@ class UserController extends Controller
         return array_values($result);
     }
 
-    // ================= PREVIEW FILE =================
+    // ================= DOWNLOAD FILE WITH TOKEN SUPPORT =================
     public function downloadKtp($id, Request $request)
     {
-        return $this->decryptFile($id, 'ktp', 'ktp', $request);
+        $token = $request->bearerToken() ?? $request->query('token');
+        
+        if ($token) {
+            $user = $this->getUserFromToken($token);
+            if ($this->canAccessEmployeeDocument($user, $id)) {
+                return $this->decryptFile($id, 'ktp', 'ktp', $request);
+            }
+        }
+        
+        if ($this->canAccessEmployeeDocument(auth()->user(), $id)) {
+            return $this->decryptFile($id, 'ktp', 'ktp', $request);
+        }
+        
+        return response()->json(['message' => 'Unauthorized'], 401);
     }
 
     public function downloadKk($id, Request $request)
     {
-        return $this->decryptFile($id, 'kk', 'kk', $request);
+        $token = $request->bearerToken() ?? $request->query('token');
+        
+        if ($token) {
+            $user = $this->getUserFromToken($token);
+            if ($this->canAccessEmployeeDocument($user, $id)) {
+                return $this->decryptFile($id, 'kk', 'kk', $request);
+            }
+        }
+        
+        if ($this->canAccessEmployeeDocument(auth()->user(), $id)) {
+            return $this->decryptFile($id, 'kk', 'kk', $request);
+        }
+        
+        return response()->json(['message' => 'Unauthorized'], 401);
     }
 
     public function downloadAkte($id, Request $request)
     {
-        return $this->decryptFile($id, 'akte', 'akte', $request);
+        $token = $request->bearerToken() ?? $request->query('token');
+        
+        if ($token) {
+            $user = $this->getUserFromToken($token);
+            if ($this->canAccessEmployeeDocument($user, $id)) {
+                return $this->decryptFile($id, 'akte', 'akte', $request);
+            }
+        }
+        
+        if ($this->canAccessEmployeeDocument(auth()->user(), $id)) {
+            return $this->decryptFile($id, 'akte', 'akte', $request);
+        }
+        
+        return response()->json(['message' => 'Unauthorized'], 401);
     }
 
     public function downloadIjazah($id, Request $request)
     {
-        $user = User::findOrFail($id);
+        $token = $request->bearerToken() ?? $request->query('token');
         $index = $request->query('index', 0);
-
-        $ijazahFiles = $this->cleanArray($user->ijazah);
-
-        if (!isset($ijazahFiles[$index])) {
-            return response()->json(['message' => 'File Ijazah tidak ditemukan'], 404);
+        
+        if ($token) {
+            $user = $this->getUserFromToken($token);
+            if ($this->canAccessEmployeeDocument($user, $id)) {
+                $targetUser = User::findOrFail($id);
+                $ijazahFiles = $this->cleanArray($targetUser->ijazah);
+                if (!isset($ijazahFiles[$index])) {
+                    return response()->json(['message' => 'File Ijazah tidak ditemukan'], 404);
+                }
+                return $this->decryptFileByPath($ijazahFiles[$index], 'ijazah_' . ($index + 1), $request);
+            }
         }
-
-        return $this->decryptFileByPath($ijazahFiles[$index], 'ijazah_' . ($index + 1), $request);
+        
+        if ($this->canAccessEmployeeDocument(auth()->user(), $id)) {
+            $targetUser = User::findOrFail($id);
+            $ijazahFiles = $this->cleanArray($targetUser->ijazah);
+            if (!isset($ijazahFiles[$index])) {
+                return response()->json(['message' => 'File Ijazah tidak ditemukan'], 404);
+            }
+            return $this->decryptFileByPath($ijazahFiles[$index], 'ijazah_' . ($index + 1), $request);
+        }
+        
+        return response()->json(['message' => 'Unauthorized'], 401);
     }
 
     public function downloadSertifikat($id, Request $request)
     {
-        $user = User::findOrFail($id);
+        $token = $request->bearerToken() ?? $request->query('token');
         $index = $request->query('index', 0);
-
-        $sertifikatFiles = $this->cleanArray($user->sertifikat);
-
-        if (!isset($sertifikatFiles[$index])) {
-            return response()->json(['message' => 'File Sertifikat tidak ditemukan'], 404);
+        
+        if ($token) {
+            $user = $this->getUserFromToken($token);
+            if ($this->canAccessEmployeeDocument($user, $id)) {
+                $targetUser = User::findOrFail($id);
+                $sertifikatFiles = $this->cleanArray($targetUser->sertifikat);
+                if (!isset($sertifikatFiles[$index])) {
+                    return response()->json(['message' => 'File Sertifikat tidak ditemukan'], 404);
+                }
+                return $this->decryptFileByPath($sertifikatFiles[$index], 'sertifikat_' . ($index + 1), $request);
+            }
         }
-
-        return $this->decryptFileByPath($sertifikatFiles[$index], 'sertifikat_' . ($index + 1), $request);
+        
+        if ($this->canAccessEmployeeDocument(auth()->user(), $id)) {
+            $targetUser = User::findOrFail($id);
+            $sertifikatFiles = $this->cleanArray($targetUser->sertifikat);
+            if (!isset($sertifikatFiles[$index])) {
+                return response()->json(['message' => 'File Sertifikat tidak ditemukan'], 404);
+            }
+            return $this->decryptFileByPath($sertifikatFiles[$index], 'sertifikat_' . ($index + 1), $request);
+        }
+        
+        return response()->json(['message' => 'Unauthorized'], 401);
     }
 
     private function decryptFile($id, $field, $name, Request $request)

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/axiosConfig";
+import tokenManager from "../utils/tokenManager";
 import {
   Eye,
   Pencil,
@@ -97,10 +98,18 @@ export default function KaryawanPage() {
     }
   };
 
+  const buildPreviewUrl = (karyawanId, type, index = null) => {
+    const token = tokenManager.getToken();
+    const params = new URLSearchParams();
+    if (index !== null) params.append("index", index);
+    if (token) params.append("token", token);
+
+    const query = params.toString();
+    return `/api/karyawan/${karyawanId}/${type}${query ? `?${query}` : ""}`;
+  };
+
   const previewFile = (karyawanId, type, index = null) => {
-    let url = `/api/karyawan/${karyawanId}/${type}`;
-    if (index !== null) url += `?index=${index}`;
-    window.open(url, '_blank');
+    window.open(buildPreviewUrl(karyawanId, type, index), "_blank");
   };
 
   const handleUpdate = async (newPassword = null) => {

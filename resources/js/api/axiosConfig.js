@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { tokenManager } from '../utils/tokenManager';
+import tokenManager from '../utils/tokenManager';
 
 // Buat instance axios dengan base URL
 const apiClient = axios.create({
@@ -20,6 +20,7 @@ apiClient.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
+        // Untuk FormData, hapus Content-Type biar browser yang set
         if (config.data instanceof FormData) {
             delete config.headers['Content-Type'];
         }
@@ -37,7 +38,7 @@ apiClient.interceptors.response.use(
         return response;
     },
     (error) => {
-        // Handle 401 Unauthorized - Session expired
+        // Handle 401 Unauthorized
         if (error.response?.status === 401) {
             const errorCode = error.response?.data?.code;
             const errorMessage = error.response?.data?.message;
@@ -54,7 +55,21 @@ apiClient.interceptors.response.use(
             } else {
                 // Unauthorized lainnya, redirect ke login
                 tokenManager.clearToken();
-                window.dispatchEvent(new CustomEvent('auth-error'));
+                
+                // Jangan redirect untuk request download
+                const isDownloadRequest = error.config?.url?.includes('/karyawan/') && 
+                                          (error.config?.url?.includes('/ktp') || 
+                                           error.config?.url?.includes('/kk') || 
+                                           error.config?.url?.includes('/akte') ||
+                                           error.config?.url?.includes('/ijazah') ||
+                                           error.config?.url?.includes('/sertifikat'));
+                
+                if (!isDownloadRequest) {
+                    window.dispatchEvent(new CustomEvent('auth-error', {
+                        detail: { message: errorMessage || 'Unauthorized' }
+                    }));
+                    window.location.href = '/login';
+                }
             }
         }
 

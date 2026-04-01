@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "../api/axiosConfig";
+import tokenManager from "../utils/tokenManager";
 import {
   User,
   Mail,
@@ -136,10 +137,18 @@ export default function Profile({ user, logout, onProfileUpdate }) {
     setPreview(preview.filter((_, i) => i !== index));
   };
 
+  const buildPreviewUrl = (type, index = null) => {
+    const token = tokenManager.getToken();
+    const params = new URLSearchParams();
+    if (index !== null) params.append("index", index);
+    if (token) params.append("token", token);
+
+    const query = params.toString();
+    return `/api/karyawan/${user.id}/${type}${query ? `?${query}` : ""}`;
+  };
+
   const previewFile = (type, index = null) => {
-    let url = `/api/karyawan/${user.id}/${type}`;
-    if (index !== null) url += `?index=${index}`;
-    window.open(url, '_blank');
+    window.open(buildPreviewUrl(type, index), "_blank");
   };
 
   const handleDeleteExistingFile = async (type, index) => {
@@ -730,7 +739,7 @@ const MultiUploadCard = ({ type, files, onFileSelect, onRemoveFile, existingFile
               <span className="truncate flex-1">{file.split('/').pop()}</span>
             </div>
             <div className="flex gap-1">
-              <button onClick={() => window.open(`/api/karyawan/${userId}/${type}?index=${idx}`)} className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition" title="Lihat">
+              <button onClick={() => window.open(buildPreviewUrl(type, idx), "_blank")} className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition" title="Lihat">
                 <Eye size={12} />
               </button>
               <button onClick={() => onDeleteFile(type, idx)} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition" title="Hapus">

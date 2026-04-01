@@ -32,11 +32,26 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 /*
 |--------------------------------------------------------------------------
+| DOWNLOAD ROUTES - WITHOUT auth:sanctum (use token from query parameter)
+|--------------------------------------------------------------------------
+| 🔥 KRUSIAL: Route download harus di OUTSIDE middleware auth:sanctum
+| agar tidak redirect ke login saat preview file
+*/
+
+Route::get('/karyawan/{id}/ktp', [UserController::class, 'downloadKtp']);
+Route::get('/karyawan/{id}/kk', [UserController::class, 'downloadKk']);
+Route::get('/karyawan/{id}/akte', [UserController::class, 'downloadAkte']);
+Route::get('/karyawan/{id}/ijazah', [UserController::class, 'downloadIjazah']);
+Route::get('/karyawan/{id}/sertifikat', [UserController::class, 'downloadSertifikat']);
+
+
+/*
+|--------------------------------------------------------------------------
 | PROTECTED API ROUTES (Authentication Required)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'session.timeout'])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
     
     /*
     |--------------------------------------------------------------------------
@@ -192,20 +207,11 @@ Route::middleware(['auth:sanctum', 'session.timeout'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | DOKUMEN KARYAWAN (ENCRYPTED)
+    | DOKUMEN KARYAWAN - DELETE FILE (untuk multiple files)
     |--------------------------------------------------------------------------
     */
 
-    // Single file documents
-    Route::get('/karyawan/{id}/ktp', [UserController::class, 'downloadKtp']);
-    Route::get('/karyawan/{id}/kk', [UserController::class, 'downloadKk']);
-    Route::get('/karyawan/{id}/akte', [UserController::class, 'downloadAkte']);
-
-    // Multiple files documents
-    Route::get('/karyawan/{id}/ijazah', [UserController::class, 'downloadIjazah']);
-    Route::get('/karyawan/{id}/sertifikat', [UserController::class, 'downloadSertifikat']);
-
-    // 🔥 DELETE FILE (untuk multiple files)
+    // 🔥 DELETE FILE (untuk multiple files) - tetap di dalam auth:sanctum
     Route::post('/karyawan/{id}/delete-file', [UserController::class, 'deleteFile']);
 
 
