@@ -125,10 +125,74 @@ export default function Profile({ user, logout, onProfileUpdate }) {
 
   const handleChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
+  // Validasi dokumen yang di-upload (sinkron dengan validasi backend di UserController)
+  const DOC_MAX_BYTES = 2 * 1024 * 1024; // 2MB
+  const ALLOWED_DOC_MIME = ["image/jpeg", "image/png", "application/pdf"];
+
+  const isAllowedDocFile = (file) => {
+    if (!file) return false;
+    if (ALLOWED_DOC_MIME.includes(file.type)) return true;
+    // fallback dari ekstensi (beberapa browser bisa beda nilai file.type)
+    const name = (file.name || "").toLowerCase();
+    return (
+      name.endsWith(".jpg") ||
+      name.endsWith(".jpeg") ||
+      name.endsWith(".png") ||
+      name.endsWith(".pdf")
+    );
+  };
+
+  const handleDocFilePick = (key, file) => {
+    if (!file) {
+      setFiles(prev => ({ ...prev, [key]: null }));
+      return;
+    }
+
+    if (!isAllowedDocFile(file)) {
+      setError("Format dokumen harus JPG, PNG, atau PDF");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    if (file.size > DOC_MAX_BYTES) {
+      setError("Ukuran dokumen maksimal 2MB");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    setFiles(prev => ({ ...prev, [key]: file }));
+  };
+
   const handleMultipleFiles = (files, setFiles, setPreview) => {
     const fileArray = Array.from(files);
-    setFiles(prev => [...prev, ...fileArray]);
-    setPreview(prev => [...prev, ...fileArray.map(f => URL.createObjectURL(f))]);
+    const validFiles = [];
+    let firstError = null;
+
+    fileArray.forEach((file) => {
+      if (!file) return;
+      if (!isAllowedDocFile(file)) {
+        if (!firstError) firstError = "Format dokumen harus JPG, PNG, atau PDF";
+        return;
+      }
+      if (file.size > DOC_MAX_BYTES) {
+        if (!firstError) firstError = "Ukuran dokumen maksimal 2MB";
+        return;
+      }
+      validFiles.push(file);
+    });
+
+    if (firstError) {
+      setError(firstError);
+      setTimeout(() => setError(null), 3000);
+    }
+
+    if (validFiles.length === 0) return;
+
+    setFiles(prev => [...prev, ...validFiles]);
+    setPreview(prev => [
+      ...prev,
+      ...validFiles.map((f) => URL.createObjectURL(f)),
+    ]);
   };
 
   const removeFile = (index, files, setFiles, preview, setPreview) => {
@@ -240,7 +304,15 @@ export default function Profile({ user, logout, onProfileUpdate }) {
         setError(data.message || "Gagal update profile");
       }
     } catch (error) {
-      setError("Terjadi kesalahan pada server");
+      const validationErrors = error.response?.data?.errors;
+      if (validationErrors) {
+        const messages = Object.values(validationErrors).flat().join(", ");
+        setError(messages || "Validasi gagal");
+        setTimeout(() => setError(null), 4000);
+      } else {
+        setError(error.response?.data?.message || "Terjadi kesalahan pada server");
+        setTimeout(() => setError(null), 4000);
+      }
     } finally {
       setLoading(false);
     }
@@ -496,20 +568,20 @@ export default function Profile({ user, logout, onProfileUpdate }) {
                         <UploadCard 
                           label="KTP" 
                           file={files.ktp} 
-                          onFileChange={(f) => setFiles(prev => ({ ...prev, ktp: f }))} 
+                          onFileChange={(f) => handleDocFilePick("ktp", f)} 
                           existingFile={profileData.ktp}
                           required
                         />
                         <UploadCard 
                           label="Kartu Keluarga (KK)" 
                           file={files.kk} 
-                          onFileChange={(f) => setFiles(prev => ({ ...prev, kk: f }))} 
+                          onFileChange={(f) => handleDocFilePick("kk", f)} 
                           existingFile={profileData.kk}
                         />
                         <UploadCard 
                           label="Akte Kelahiran" 
                           file={files.akte} 
-                          onFileChange={(f) => setFiles(prev => ({ ...prev, akte: f }))} 
+                          onFileChange={(f) => handleDocFilePick("akte", f)} 
                           existingFile={profileData.akte}
                         />
                       </div>
