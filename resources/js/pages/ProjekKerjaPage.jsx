@@ -15,7 +15,8 @@ import {
   Activity,
   Settings,
   ShoppingCart,
-  Clock
+  Clock,
+  DollarSign
 } from "lucide-react";
 
 export default function ProjekKerjaPage() {
@@ -66,6 +67,8 @@ export default function ProjekKerjaPage() {
     start_date: "",
     problem_description: "",
     barang_dibeli: "",
+    uang_jalan: "",
+    uang_pengeluaran: "",
     file: null,
     photos: []
   };
@@ -96,6 +99,12 @@ export default function ProjekKerjaPage() {
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [newStatus, setNewStatus] = useState("");
+
+  // Modal uang jalan & pengeluaran
+  const [showUangModal, setShowUangModal] = useState(false);
+  const [editUang, setEditUang] = useState(false);
+  const [uangData, setUangData] = useState({ uang_jalan: 0, uang_pengeluaran: 0 });
+  const [newUang, setNewUang] = useState({ uang_jalan: "", uang_pengeluaran: "" });
 
   useEffect(() => {
     fetchData();
@@ -151,6 +160,8 @@ export default function ProjekKerjaPage() {
         start_date: form.start_date,
         problem_description: form.problem_description,
         barang_dibeli: form.barang_dibeli,
+        uang_jalan: form.uang_jalan || 0,
+        uang_pengeluaran: form.uang_pengeluaran || 0,
       }).forEach(([key, val]) => {
         formData.append(key, val || "");
       });
@@ -259,6 +270,52 @@ export default function ProjekKerjaPage() {
     setSelectedItem(item);
     setNewStatus(item.status);
     setShowTimelineModal(true);
+  };
+
+  const formatRupiah = (amount) => {
+    const value = Number(amount || 0);
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const openUangModal = (item) => {
+    const jalan = Number(item.uang_jalan || 0);
+    const pengeluaran = Number(item.uang_pengeluaran || 0);
+
+    setCurrentId(item.id);
+    setUangData({ uang_jalan: jalan, uang_pengeluaran: pengeluaran });
+    setNewUang({ uang_jalan: String(jalan), uang_pengeluaran: String(pengeluaran) });
+    setEditUang(false);
+    setShowUangModal(true);
+  };
+
+  const handleUpdateUang = async () => {
+    if (!currentId) return;
+    const jalan = Number(newUang.uang_jalan || 0);
+    const pengeluaran = Number(newUang.uang_pengeluaran || 0);
+
+    if (jalan < 0 || pengeluaran < 0 || Number.isNaN(jalan) || Number.isNaN(pengeluaran)) {
+      alert("Nominal harus angka dan tidak boleh negatif");
+      return;
+    }
+
+    try {
+      await api.patch(`/projek-kerja/${currentId}/uang`, {
+        uang_jalan: jalan,
+        uang_pengeluaran: pengeluaran,
+      });
+
+      setUangData({ uang_jalan: jalan, uang_pengeluaran: pengeluaran });
+      setEditUang(false);
+      setShowUangModal(false);
+      fetchData();
+    } catch (err) {
+      const msg = err.response?.data?.message || "Gagal update data uang";
+      alert(msg);
+    }
   };
 
   const handleSaveStatus = async () => {
@@ -603,6 +660,9 @@ export default function ProjekKerjaPage() {
                       <button onClick={() => openTimelineModal(item)} className="bg-purple-600 hover:bg-purple-700 text-white p-1.5 rounded-lg" title="Ubah Status">
                         <Clock size={14} />
                       </button>
+                      <button onClick={() => openUangModal(item)} className="bg-amber-600 hover:bg-amber-700 text-white p-1.5 rounded-lg" title="Uang Jalan & Pengeluaran">
+                        <DollarSign size={14} />
+                      </button>
                       {(role === "super_admin" || item.divisi === divisiUser) && (
                         <button onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg" title="Hapus">
                           <Trash2 size={14} />
@@ -796,6 +856,82 @@ export default function ProjekKerjaPage() {
                 Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL UANG ================= */}
+      {showUangModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 relative">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <DollarSign className="text-amber-600" />
+              Uang Jalan & Pengeluaran
+            </h3>
+
+            {!editUang ? (
+              <>
+                <div className="space-y-2 text-gray-700">
+                  <p><span className="font-semibold">Uang Jalan:</span> {formatRupiah(uangData.uang_jalan)}</p>
+                  <p><span className="font-semibold">Uang Pengeluaran:</span> {formatRupiah(uangData.uang_pengeluaran)}</p>
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={() => setEditUang(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setShowUangModal(false)}
+                    className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Uang Jalan</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newUang.uang_jalan}
+                      onChange={(e) => setNewUang(prev => ({ ...prev, uang_jalan: e.target.value }))}
+                      className="border w-full p-3 rounded-xl"
+                      placeholder="Masukkan nominal uang jalan"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Uang Pengeluaran</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newUang.uang_pengeluaran}
+                      onChange={(e) => setNewUang(prev => ({ ...prev, uang_pengeluaran: e.target.value }))}
+                      className="border w-full p-3 rounded-xl"
+                      placeholder="Masukkan nominal uang pengeluaran"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={handleUpdateUang}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                  >
+                    Simpan
+                  </button>
+                  <button
+                    onClick={() => setEditUang(false)}
+                    className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

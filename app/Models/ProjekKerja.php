@@ -25,7 +25,9 @@ class ProjekKerja extends Model
         'status',
         'start_date',
         'problem_description',
-        'barang_dibeli' // <-- TAMBAHKAN INI
+        'barang_dibeli',
+        'uang_jalan',
+        'uang_pengeluaran'
     ];
 
 
@@ -35,6 +37,8 @@ class ProjekKerja extends Model
 
     protected $casts = [
         'start_date' => 'date:Y-m-d',
+        'uang_jalan' => 'decimal:2',
+        'uang_pengeluaran' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

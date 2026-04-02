@@ -45,6 +45,8 @@ class ProjekKerjaController extends Controller
             'start_date' => 'required|date',
             'problem_description' => 'nullable|string',
             'barang_dibeli' => 'nullable|string',
+            'uang_jalan' => 'nullable|numeric|min:0',
+            'uang_pengeluaran' => 'nullable|numeric|min:0',
             'file' => 'nullable|file|max:5120',
             'files.*' => 'nullable|file|max:5120',
             'photos.*' => 'nullable|image|max:2048'
@@ -68,6 +70,8 @@ class ProjekKerjaController extends Controller
                 'start_date' => Carbon::parse($request->start_date)->format('Y-m-d'),
                 'problem_description' => $request->problem_description,
                 'barang_dibeli' => $request->barang_dibeli,
+                'uang_jalan' => $request->uang_jalan ?? 0,
+                'uang_pengeluaran' => $request->uang_pengeluaran ?? 0,
             ]);
 
             /* ================= FILE UPLOAD ================= */
@@ -134,6 +138,8 @@ class ProjekKerjaController extends Controller
             'start_date' => 'required|date',
             'problem_description' => 'nullable|string',
             'barang_dibeli' => 'nullable|string',
+            'uang_jalan' => 'nullable|numeric|min:0',
+            'uang_pengeluaran' => 'nullable|numeric|min:0',
         ]);
 
         $projek = ProjekKerja::findOrFail($id);
@@ -147,6 +153,8 @@ class ProjekKerjaController extends Controller
             'start_date' => Carbon::parse($request->start_date)->format('Y-m-d'),
             'problem_description' => $request->problem_description,
             'barang_dibeli' => $request->barang_dibeli,
+            'uang_jalan' => $request->uang_jalan ?? 0,
+            'uang_pengeluaran' => $request->uang_pengeluaran ?? 0,
         ]);
 
         return response()->json([
@@ -309,6 +317,28 @@ class ProjekKerjaController extends Controller
         ]);
 
         return response()->json(['success' => true]);
+    }
+
+    /* ======================================================
+       UPDATE UANG JALAN & PENGELUARAN
+    ====================================================== */
+    public function updateUang(Request $request, $id)
+    {
+        $request->validate([
+            'uang_jalan' => 'required|numeric|min:0',
+            'uang_pengeluaran' => 'required|numeric|min:0',
+        ]);
+
+        $projek = ProjekKerja::findOrFail($id);
+        $projek->update([
+            'uang_jalan' => $request->uang_jalan,
+            'uang_pengeluaran' => $request->uang_pengeluaran,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $projek
+        ]);
     }
 
     /* ======================================================

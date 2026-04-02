@@ -299,6 +299,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         'updateDescription'
     ]);
 
+    Route::patch('/projek-kerja/{id}/uang', [
+        ProjekKerjaController::class,
+        'updateUang'
+    ]);
+
     // Tambahkan route untuk update data projek secara keseluruhan
     Route::put('/projek-kerja/{id}', [ProjekKerjaController::class, 'update']);
 
