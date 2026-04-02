@@ -19,6 +19,7 @@ use App\Http\Controllers\ServiceReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BASTController;
 use App\Http\Controllers\BAUFController;
+use App\Http\Controllers\BAMController;
 
 
 /*
@@ -463,6 +464,37 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::delete('/bauf/{id}', [
         BAUFController::class,
+        'destroy'
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | BAM PDF
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/bam/next-nomor', [
+        BAMController::class,
+        'getNextNomorSurat'
+    ]);
+
+    Route::get('/bam/history', [
+        BAMController::class,
+        'getHistory'
+    ]);
+
+    Route::post('/bam/pdf', [
+        BAMController::class,
+        'generatePDF'
+    ]);
+
+    Route::get('/bam/{id}/pdf', [
+        BAMController::class,
+        'regeneratePDF'
+    ]);
+
+    Route::delete('/bam/{id}', [
+        BAMController::class,
         'destroy'
     ]);
 

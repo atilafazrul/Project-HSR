@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, ClipboardCheck } from "lucide-react";
+import { FileText, ClipboardCheck, Wrench } from "lucide-react";
 
 export default function BeritaAcaraPage() {
   const navigate = useNavigate();
@@ -28,6 +28,14 @@ export default function BeritaAcaraPage() {
 
       {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* BAM */}
+        <Card
+          icon={<Wrench size={30} className="text-purple-600" />}
+          title="BAM"
+          subtitle="Berita Acara Maintenance"
+          onClick={() => navigate(`${basePath}/berita-acara/bam`)}
+        />
+
         {/* BAUF */}
         <Card
           icon={<ClipboardCheck size={30} className="text-blue-600" />}

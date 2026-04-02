@@ -41,6 +41,7 @@ import TargetPage from "./TargetPage";
 import BeritaAcaraPage from "./BeritaAcaraPage";
 import BAUFPage from "./berita-acara/BAUFPage";
 import BASTPage from "./berita-acara/BASTPage";
+import BAMPage from "./berita-acara/BAMPage";
 
 /* INVENTORY */
 import InventoryPage from "./InventoryPage";
@@ -566,6 +567,7 @@ export default function AdminDashboard({ user, logout }) {
 
             {/* ================= BERITA ACARA ================= */}
             <Route path="berita-acara" element={<BeritaAcaraPage />} />
+            <Route path="berita-acara/bam" element={<BAMPage />} />
             <Route path="berita-acara/bauf" element={<BAUFPage />} />
             <Route path="berita-acara/bast" element={<BASTPage />} />
 
