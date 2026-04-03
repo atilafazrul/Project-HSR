@@ -16,7 +16,8 @@ import {
   Settings,
   ShoppingCart,
   Clock,
-  DollarSign
+  DollarSign,
+  Plus
 } from "lucide-react";
 
 export default function ProjekKerjaPage() {
@@ -67,8 +68,6 @@ export default function ProjekKerjaPage() {
     start_date: "",
     problem_description: "",
     barang_dibeli: "",
-    uang_jalan: "",
-    uang_pengeluaran: "",
     file: null,
     photos: []
   };
@@ -100,11 +99,15 @@ export default function ProjekKerjaPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [newStatus, setNewStatus] = useState("");
 
-  // Modal uang jalan & pengeluaran
+  // Modal biaya (jalan, pengeluaran, reimbursment) — banyak baris per kategori
   const [showUangModal, setShowUangModal] = useState(false);
   const [editUang, setEditUang] = useState(false);
-  const [uangData, setUangData] = useState({ uang_jalan: 0, uang_pengeluaran: 0 });
-  const [newUang, setNewUang] = useState({ uang_jalan: "", uang_pengeluaran: "" });
+  const emptyBiayaRow = () => ({ nominal: "", keterangan: "" });
+  const [biayaEdit, setBiayaEdit] = useState({
+    jalan: [emptyBiayaRow()],
+    pengeluaran: [emptyBiayaRow()],
+    reimbursment: [emptyBiayaRow()],
+  });
 
   useEffect(() => {
     fetchData();
@@ -160,8 +163,6 @@ export default function ProjekKerjaPage() {
         start_date: form.start_date,
         problem_description: form.problem_description,
         barang_dibeli: form.barang_dibeli,
-        uang_jalan: form.uang_jalan || 0,
-        uang_pengeluaran: form.uang_pengeluaran || 0,
       }).forEach(([key, val]) => {
         formData.append(key, val || "");
       });
@@ -281,39 +282,129 @@ export default function ProjekKerjaPage() {
     }).format(value);
   };
 
-  const openUangModal = (item) => {
-    const jalan = Number(item.uang_jalan || 0);
-    const pengeluaran = Number(item.uang_pengeluaran || 0);
+  const normalizeBiayaRows = (arr) => {
+    if (!Array.isArray(arr) || arr.length === 0) return [emptyBiayaRow()];
+    return arr.map((r) => ({
+      nominal: r.nominal != null && r.nominal !== "" ? String(r.nominal) : "",
+      keterangan: r.keterangan ?? "",
+    }));
+  };
 
+  const sumBiayaRows = (rows) =>
+    rows.reduce((acc, r) => acc + (Number(r.nominal) || 0), 0);
+
+  const displayBiayaRows = (rows) =>
+    rows.filter(
+      (r) =>
+        (Number(r.nominal) || 0) > 0 ||
+        (r.keterangan && String(r.keterangan).trim() !== "")
+    );
+
+  const biayaToPayload = (rows) =>
+    rows.map((r) => ({
+      nominal: Number.isFinite(Number(r.nominal)) ? Number(r.nominal) : 0,
+      keterangan: (r.keterangan || "").trim(),
+    }));
+
+  const openUangModal = (item) => {
     setCurrentId(item.id);
-    setUangData({ uang_jalan: jalan, uang_pengeluaran: pengeluaran });
-    setNewUang({ uang_jalan: String(jalan), uang_pengeluaran: String(pengeluaran) });
+    setBiayaEdit({
+      jalan: normalizeBiayaRows(item.biaya_jalan_items),
+      pengeluaran: normalizeBiayaRows(item.biaya_pengeluaran_items),
+      reimbursment: normalizeBiayaRows(item.biaya_reimbursment_items),
+    });
     setEditUang(false);
     setShowUangModal(true);
   };
 
+  const addBiayaRow = (key) => {
+    setBiayaEdit((prev) => ({
+      ...prev,
+      [key]: [...prev[key], emptyBiayaRow()],
+    }));
+  };
+
+  const removeBiayaRow = (key, index) => {
+    setBiayaEdit((prev) => {
+      const next = [...prev[key]];
+      if (next.length <= 1) return prev;
+      next.splice(index, 1);
+      return { ...prev, [key]: next };
+    });
+  };
+
+  const updateBiayaCell = (key, index, field, value) => {
+    setBiayaEdit((prev) => {
+      const next = [...prev[key]];
+      next[index] = { ...next[index], [field]: value };
+      return { ...prev, [key]: next };
+    });
+  };
+
   const handleUpdateUang = async () => {
     if (!currentId) return;
-    const jalan = Number(newUang.uang_jalan || 0);
-    const pengeluaran = Number(newUang.uang_pengeluaran || 0);
-
-    if (jalan < 0 || pengeluaran < 0 || Number.isNaN(jalan) || Number.isNaN(pengeluaran)) {
-      alert("Nominal harus angka dan tidak boleh negatif");
+    const item = dataList.find(i => i.id === currentId);
+    if (item && role !== "super_admin" && item.is_lunas) {
+      alert("Data sudah lunas, hanya superadmin yang bisa mengubah biaya.");
       return;
     }
 
     try {
       await api.patch(`/projek-kerja/${currentId}/uang`, {
-        uang_jalan: jalan,
-        uang_pengeluaran: pengeluaran,
+        biaya_jalan_items: biayaToPayload(biayaEdit.jalan),
+        biaya_pengeluaran_items: biayaToPayload(biayaEdit.pengeluaran),
+        biaya_reimbursment_items: biayaToPayload(biayaEdit.reimbursment),
       });
 
-      setUangData({ uang_jalan: jalan, uang_pengeluaran: pengeluaran });
       setEditUang(false);
       setShowUangModal(false);
       fetchData();
     } catch (err) {
-      const msg = err.response?.data?.message || "Gagal update data uang";
+      const msg =
+        err.response?.data?.message ||
+        (err.response?.data?.errors
+          ? Object.values(err.response.data.errors).flat().join("\n")
+          : null) ||
+        "Gagal menyimpan data biaya";
+      alert(msg);
+    }
+  };
+
+  const handleExportBiaya = async () => {
+    if (!currentId) return;
+    try {
+      const res = await api.get(`/projek-kerja/${currentId}/export-biaya`, {
+        responseType: "blob",
+      });
+      const dispo = res.headers["content-disposition"];
+      let filename = `biaya-projek-${currentId}.csv`;
+      if (dispo && dispo.includes("filename=")) {
+        const m = dispo.match(/filename="?([^";]+)"?/i);
+        if (m) filename = m[1];
+      }
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv;charset=utf-8" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Gagal mengunduh file");
+    }
+  };
+
+  const handleSetLunas = async (item, nextLunas) => {
+    if (role !== "super_admin") return;
+    try {
+      await api.patch(`/projek-kerja/${item.id}/lunas`, { is_lunas: nextLunas });
+      fetchData();
+      if (currentId === item.id) {
+        setEditUang(false);
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || "Gagal update status lunas";
       alert(msg);
     }
   };
@@ -657,14 +748,26 @@ export default function ProjekKerjaPage() {
                       <button onClick={() => handleViewPhoto(item.id)} className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg" title="Lihat Foto">
                         <FileText size={14} />
                       </button>
-                      <button onClick={() => openTimelineModal(item)} className="bg-purple-600 hover:bg-purple-700 text-white p-1.5 rounded-lg" title="Ubah Status">
+                      <button
+                        onClick={() => openTimelineModal(item)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white p-1.5 rounded-lg"
+                        title="Ubah Status"
+                      >
                         <Clock size={14} />
                       </button>
-                      <button onClick={() => openUangModal(item)} className="bg-amber-600 hover:bg-amber-700 text-white p-1.5 rounded-lg" title="Uang Jalan & Pengeluaran">
+                      <button
+                        onClick={() => openUangModal(item)}
+                        className="bg-amber-600 hover:bg-amber-700 text-white p-1.5 rounded-lg"
+                        title="Biaya jalan, pengeluaran & reimbursment"
+                      >
                         <DollarSign size={14} />
                       </button>
                       {(role === "super_admin" || item.divisi === divisiUser) && (
-                        <button onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg" title="Hapus">
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg"
+                          title="Hapus"
+                        >
                           <Trash2 size={14} />
                         </button>
                       )}
@@ -849,7 +952,10 @@ export default function ProjekKerjaPage() {
             </div>
 
             <div className="flex justify-end gap-3">
-              <button onClick={handleSaveStatus} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+              <button
+                onClick={handleSaveStatus}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+              >
                 Simpan Perubahan
               </button>
               <button onClick={() => setShowTimelineModal(false)} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg">
@@ -860,29 +966,108 @@ export default function ProjekKerjaPage() {
         </div>
       )}
 
-      {/* ================= MODAL UANG ================= */}
+      {/* ================= MODAL BIAYA (JALAN / PENGELUARAN / REIMBURSMENT) ================= */}
       {showUangModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 relative">
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-6 relative my-8 max-h-[92vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
               <DollarSign className="text-amber-600" />
-              Uang Jalan & Pengeluaran
+              Biaya Jalan, Pengeluaran & Reimbursment
             </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Tambah beberapa baris per kategori; total dihitung otomatis. Unduh ke Excel (CSV) untuk laporan.
+            </p>
+            {(() => {
+              const item = dataList.find(i => i.id === currentId);
+              if (!item?.is_lunas) return null;
+              return (
+                <div className="mb-4 text-xs text-amber-800 bg-amber-100 border border-amber-300 px-3 py-2 rounded-lg">
+                  Status pembayaran: <span className="font-semibold">Lunas</span>. {role === "super_admin" ? "Superadmin tetap bisa edit." : "Admin tidak bisa edit."}
+                </div>
+              );
+            })()}
 
             {!editUang ? (
               <>
-                <div className="space-y-2 text-gray-700">
-                  <p><span className="font-semibold">Uang Jalan:</span> {formatRupiah(uangData.uang_jalan)}</p>
-                  <p><span className="font-semibold">Uang Pengeluaran:</span> {formatRupiah(uangData.uang_pengeluaran)}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 text-sm">
+                  {[
+                    { key: "jalan", label: "Biaya Jalan", rows: biayaEdit.jalan },
+                    { key: "pengeluaran", label: "Biaya Pengeluaran", rows: biayaEdit.pengeluaran },
+                    { key: "reimbursment", label: "Biaya Reimbursment", rows: biayaEdit.reimbursment },
+                  ].map((col) => {
+                    const shown = displayBiayaRows(col.rows);
+                    return (
+                    <div key={col.key} className="border rounded-xl p-3 bg-gray-50/80">
+                      <p className="font-semibold text-gray-800 mb-2">{col.label}</p>
+                      {shown.length === 0 ? (
+                        <p className="text-xs text-gray-400">Belum ada entri</p>
+                      ) : (
+                        <ul className="space-y-1 text-gray-700 max-h-40 overflow-y-auto">
+                          {shown.map((r, i) => (
+                            <li key={i} className="text-xs border-b border-gray-200/80 pb-1">
+                              <span className="font-medium">{formatRupiah(r.nominal || 0)}</span>
+                              {r.keterangan ? (
+                                <span className="block text-gray-600 mt-0.5">{r.keterangan}</span>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <p className="mt-2 pt-2 border-t text-amber-800 font-semibold">
+                        Subtotal: {formatRupiah(sumBiayaRows(col.rows))}
+                      </p>
+                    </div>
+                    );
+                  })}
                 </div>
-                <div className="flex justify-end gap-3 mt-6">
+                <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="text-lg font-bold text-amber-900">
+                    Total keseluruhan:{" "}
+                    {formatRupiah(
+                      sumBiayaRows(biayaEdit.jalan) +
+                        sumBiayaRows(biayaEdit.pengeluaran) +
+                        sumBiayaRows(biayaEdit.reimbursment)
+                    )}
+                  </p>
+                </div>
+                <div className="flex flex-wrap justify-end gap-3 mt-6">
+                  {role === "super_admin" && (() => {
+                    const item = dataList.find(i => i.id === currentId);
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => item && handleSetLunas(item, !item.is_lunas)}
+                        className={`px-4 py-2 rounded-lg text-white ${item?.is_lunas ? "bg-slate-600 hover:bg-slate-700" : "bg-green-600 hover:bg-green-700"}`}
+                      >
+                        {item?.is_lunas ? "Batalkan Lunas" : "Tandai Lunas"}
+                      </button>
+                    );
+                  })()}
                   <button
+                    type="button"
+                    onClick={handleExportBiaya}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                  >
+                    <Download size={18} />
+                    Unduh Excel (CSV)
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setEditUang(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                    disabled={(() => {
+                      const item = dataList.find(i => i.id === currentId);
+                      return role !== "super_admin" && item?.is_lunas;
+                    })()}
+                    className={`px-4 py-2 rounded-lg text-white ${(() => {
+                      const item = dataList.find(i => i.id === currentId);
+                      const locked = role !== "super_admin" && item?.is_lunas;
+                      return locked ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700";
+                    })()}`}
                   >
                     Edit
                   </button>
                   <button
+                    type="button"
                     onClick={() => setShowUangModal(false)}
                     className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg"
                   >
@@ -892,39 +1077,93 @@ export default function ProjekKerjaPage() {
               </>
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Uang Jalan</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={newUang.uang_jalan}
-                      onChange={(e) => setNewUang(prev => ({ ...prev, uang_jalan: e.target.value }))}
-                      className="border w-full p-3 rounded-xl"
-                      placeholder="Masukkan nominal uang jalan"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Uang Pengeluaran</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={newUang.uang_pengeluaran}
-                      onChange={(e) => setNewUang(prev => ({ ...prev, uang_pengeluaran: e.target.value }))}
-                      className="border w-full p-3 rounded-xl"
-                      placeholder="Masukkan nominal uang pengeluaran"
-                    />
-                  </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {[
+                    { key: "jalan", label: "Biaya Jalan & Keterangan", color: "border-emerald-200 bg-emerald-50/50" },
+                    { key: "pengeluaran", label: "Biaya Pengeluaran & Keterangan", color: "border-blue-200 bg-blue-50/50" },
+                    { key: "reimbursment", label: "Biaya Reimbursment & Keterangan", color: "border-violet-200 bg-violet-50/50" },
+                  ].map((col) => (
+                    <div key={col.key} className={`rounded-xl border p-3 ${col.color}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-sm text-gray-800">{col.label}</span>
+                        <button
+                          type="button"
+                          onClick={() => addBiayaRow(col.key)}
+                          className="p-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-100 text-emerald-700"
+                          title="Tambah baris"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {biayaEdit[col.key].map((row, idx) => (
+                          <div key={idx} className="bg-white rounded-lg border p-2 space-y-2">
+                            <div className="flex gap-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={row.nominal}
+                                onChange={(e) => updateBiayaCell(col.key, idx, "nominal", e.target.value)}
+                                className="border w-full p-2 rounded-lg text-sm"
+                                placeholder="Nominal"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeBiayaRow(col.key, idx)}
+                                className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 shrink-0"
+                                title="Hapus baris"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              value={row.keterangan}
+                              onChange={(e) => updateBiayaCell(col.key, idx, "keterangan", e.target.value)}
+                              className="border w-full p-2 rounded-lg text-sm"
+                              placeholder="Keterangan"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-gray-800">
+                        Subtotal: {formatRupiah(sumBiayaRows(biayaEdit[col.key]))}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-end gap-3 mt-6">
+                <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
+                  <p className="text-base font-bold text-amber-900">
+                    Total keseluruhan:{" "}
+                    {formatRupiah(
+                      sumBiayaRows(biayaEdit.jalan) +
+                        sumBiayaRows(biayaEdit.pengeluaran) +
+                        sumBiayaRows(biayaEdit.reimbursment)
+                    )}
+                  </p>
+                </div>
+                <div className="flex flex-wrap justify-end gap-3 mt-6">
                   <button
+                    type="button"
                     onClick={handleUpdateUang}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
                   >
                     Simpan
                   </button>
                   <button
-                    onClick={() => setEditUang(false)}
+                    type="button"
+                    onClick={() => {
+                      setEditUang(false);
+                      const item = dataList.find((i) => i.id === currentId);
+                      if (item) {
+                        setBiayaEdit({
+                          jalan: normalizeBiayaRows(item.biaya_jalan_items),
+                          pengeluaran: normalizeBiayaRows(item.biaya_pengeluaran_items),
+                          reimbursment: normalizeBiayaRows(item.biaya_reimbursment_items),
+                        });
+                      }
+                    }}
                     className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg"
                   >
                     Batal

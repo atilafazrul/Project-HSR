@@ -26,8 +26,11 @@ class ProjekKerja extends Model
         'start_date',
         'problem_description',
         'barang_dibeli',
-        'uang_jalan',
-        'uang_pengeluaran'
+        'biaya_jalan_items',
+        'biaya_pengeluaran_items',
+        'biaya_reimbursment_items',
+        'is_lunas',
+        'lunas_at',
     ];
 
 
@@ -37,8 +40,11 @@ class ProjekKerja extends Model
 
     protected $casts = [
         'start_date' => 'date:Y-m-d',
-        'uang_jalan' => 'decimal:2',
-        'uang_pengeluaran' => 'decimal:2',
+        'biaya_jalan_items' => 'array',
+        'biaya_pengeluaran_items' => 'array',
+        'biaya_reimbursment_items' => 'array',
+        'is_lunas' => 'boolean',
+        'lunas_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

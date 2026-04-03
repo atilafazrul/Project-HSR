@@ -12,6 +12,49 @@ use Carbon\Carbon;
 
 class ProjekKerjaController extends Controller
 {
+    protected function isSuperAdmin(Request $request): bool
+    {
+        return $request->user()?->role === 'super_admin';
+    }
+
+    protected function rejectIfLockedForAdmin(Request $request, ProjekKerja $projek)
+    {
+        if ($projek->is_lunas && ! $this->isSuperAdmin($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data sudah lunas, hanya superadmin yang bisa mengubah.',
+            ], 403);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, mixed>|null  $items
+     * @return array<int, array{nominal: float, keterangan: string}>
+     */
+    protected function filterBiayaItems(?array $items): array
+    {
+        if ($items === null) {
+            return [];
+        }
+        $out = [];
+        foreach ($items as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $nom = isset($row['nominal']) ? (float) $row['nominal'] : 0;
+            $ket = isset($row['keterangan']) ? trim((string) $row['keterangan']) : '';
+            if ($nom < 0) {
+                $nom = 0;
+            }
+            if ($nom > 0 || $ket !== '') {
+                $out[] = ['nominal' => round($nom, 2), 'keterangan' => $ket];
+            }
+        }
+
+        return $out;
+    }
 
     /* ======================================================
        GET ALL
@@ -45,8 +88,15 @@ class ProjekKerjaController extends Controller
             'start_date' => 'required|date',
             'problem_description' => 'nullable|string',
             'barang_dibeli' => 'nullable|string',
-            'uang_jalan' => 'nullable|numeric|min:0',
-            'uang_pengeluaran' => 'nullable|numeric|min:0',
+            'biaya_jalan_items' => 'nullable|array',
+            'biaya_jalan_items.*.nominal' => 'required|numeric|min:0',
+            'biaya_jalan_items.*.keterangan' => 'nullable|string|max:2000',
+            'biaya_pengeluaran_items' => 'nullable|array',
+            'biaya_pengeluaran_items.*.nominal' => 'required|numeric|min:0',
+            'biaya_pengeluaran_items.*.keterangan' => 'nullable|string|max:2000',
+            'biaya_reimbursment_items' => 'nullable|array',
+            'biaya_reimbursment_items.*.nominal' => 'required|numeric|min:0',
+            'biaya_reimbursment_items.*.keterangan' => 'nullable|string|max:2000',
             'file' => 'nullable|file|max:5120',
             'files.*' => 'nullable|file|max:5120',
             'photos.*' => 'nullable|image|max:2048'
@@ -70,8 +120,9 @@ class ProjekKerjaController extends Controller
                 'start_date' => Carbon::parse($request->start_date)->format('Y-m-d'),
                 'problem_description' => $request->problem_description,
                 'barang_dibeli' => $request->barang_dibeli,
-                'uang_jalan' => $request->uang_jalan ?? 0,
-                'uang_pengeluaran' => $request->uang_pengeluaran ?? 0,
+                'biaya_jalan_items' => $this->filterBiayaItems($request->input('biaya_jalan_items')),
+                'biaya_pengeluaran_items' => $this->filterBiayaItems($request->input('biaya_pengeluaran_items')),
+                'biaya_reimbursment_items' => $this->filterBiayaItems($request->input('biaya_reimbursment_items')),
             ]);
 
             /* ================= FILE UPLOAD ================= */
@@ -138,13 +189,20 @@ class ProjekKerjaController extends Controller
             'start_date' => 'required|date',
             'problem_description' => 'nullable|string',
             'barang_dibeli' => 'nullable|string',
-            'uang_jalan' => 'nullable|numeric|min:0',
-            'uang_pengeluaran' => 'nullable|numeric|min:0',
+            'biaya_jalan_items' => 'nullable|array',
+            'biaya_jalan_items.*.nominal' => 'required|numeric|min:0',
+            'biaya_jalan_items.*.keterangan' => 'nullable|string|max:2000',
+            'biaya_pengeluaran_items' => 'nullable|array',
+            'biaya_pengeluaran_items.*.nominal' => 'required|numeric|min:0',
+            'biaya_pengeluaran_items.*.keterangan' => 'nullable|string|max:2000',
+            'biaya_reimbursment_items' => 'nullable|array',
+            'biaya_reimbursment_items.*.nominal' => 'required|numeric|min:0',
+            'biaya_reimbursment_items.*.keterangan' => 'nullable|string|max:2000',
         ]);
 
         $projek = ProjekKerja::findOrFail($id);
 
-        $projek->update([
+        $data = [
             'divisi' => $request->divisi,
             'jenis_pekerjaan' => $request->jenis_pekerjaan,
             'karyawan' => $request->karyawan,
@@ -153,9 +211,18 @@ class ProjekKerjaController extends Controller
             'start_date' => Carbon::parse($request->start_date)->format('Y-m-d'),
             'problem_description' => $request->problem_description,
             'barang_dibeli' => $request->barang_dibeli,
-            'uang_jalan' => $request->uang_jalan ?? 0,
-            'uang_pengeluaran' => $request->uang_pengeluaran ?? 0,
-        ]);
+        ];
+        if ($request->has('biaya_jalan_items')) {
+            $data['biaya_jalan_items'] = $this->filterBiayaItems($request->input('biaya_jalan_items'));
+        }
+        if ($request->has('biaya_pengeluaran_items')) {
+            $data['biaya_pengeluaran_items'] = $this->filterBiayaItems($request->input('biaya_pengeluaran_items'));
+        }
+        if ($request->has('biaya_reimbursment_items')) {
+            $data['biaya_reimbursment_items'] = $this->filterBiayaItems($request->input('biaya_reimbursment_items'));
+        }
+
+        $projek->update($data);
 
         return response()->json([
             'success' => true,
@@ -261,7 +328,6 @@ class ProjekKerjaController extends Controller
     public function deletePhoto($id)
     {
         $photo = ProjekKerjaPhoto::findOrFail($id);
-
         if (Storage::disk('public')->exists($photo->photo)) {
             Storage::disk('public')->delete($photo->photo);
         }
@@ -277,7 +343,6 @@ class ProjekKerjaController extends Controller
     public function deleteFile($id)
     {
         $file = ProjekKerjaFile::findOrFail($id);
-
         if (Storage::disk('public')->exists($file->file)) {
             Storage::disk('public')->delete($file->file);
         }
@@ -320,24 +385,111 @@ class ProjekKerjaController extends Controller
     }
 
     /* ======================================================
-       UPDATE UANG JALAN & PENGELUARAN
+       UPDATE BIAYA (JALAN, PENGELUARAN, REIMBURSMENT)
     ====================================================== */
     public function updateUang(Request $request, $id)
     {
         $request->validate([
-            'uang_jalan' => 'required|numeric|min:0',
-            'uang_pengeluaran' => 'required|numeric|min:0',
+            'biaya_jalan_items' => 'required|array',
+            'biaya_jalan_items.*.nominal' => 'required|numeric|min:0',
+            'biaya_jalan_items.*.keterangan' => 'nullable|string|max:2000',
+            'biaya_pengeluaran_items' => 'required|array',
+            'biaya_pengeluaran_items.*.nominal' => 'required|numeric|min:0',
+            'biaya_pengeluaran_items.*.keterangan' => 'nullable|string|max:2000',
+            'biaya_reimbursment_items' => 'required|array',
+            'biaya_reimbursment_items.*.nominal' => 'required|numeric|min:0',
+            'biaya_reimbursment_items.*.keterangan' => 'nullable|string|max:2000',
         ]);
 
         $projek = ProjekKerja::findOrFail($id);
+        if ($resp = $this->rejectIfLockedForAdmin($request, $projek)) {
+            return $resp;
+        }
         $projek->update([
-            'uang_jalan' => $request->uang_jalan,
-            'uang_pengeluaran' => $request->uang_pengeluaran,
+            'biaya_jalan_items' => $this->filterBiayaItems($request->input('biaya_jalan_items')),
+            'biaya_pengeluaran_items' => $this->filterBiayaItems($request->input('biaya_pengeluaran_items')),
+            'biaya_reimbursment_items' => $this->filterBiayaItems($request->input('biaya_reimbursment_items')),
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $projek
+            'data' => $projek->fresh(),
+        ]);
+    }
+
+    /* ======================================================
+       EXPORT BIAYA → CSV (dibuka di Microsoft Excel)
+    ====================================================== */
+    public function exportBiayaCsv($id)
+    {
+        $projek = ProjekKerja::findOrFail($id);
+
+        $sections = [
+            'Biaya Jalan' => $projek->biaya_jalan_items ?? [],
+            'Biaya Pengeluaran' => $projek->biaya_pengeluaran_items ?? [],
+            'Biaya Reimbursment' => $projek->biaya_reimbursment_items ?? [],
+        ];
+
+        $filename = 'biaya-projek-'.preg_replace('/[^a-zA-Z0-9_-]/', '_', (string) $projek->report_no).'-'.$id.'.csv';
+
+        return response()->streamDownload(function () use ($sections, $projek) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Ringkasan Biaya Projek Kerja'], ';');
+            fputcsv($out, ['No. Laporan', $projek->report_no], ';');
+            fputcsv($out, ['Divisi', $projek->divisi], ';');
+            fputcsv($out, ['Jenis Pekerjaan', $projek->jenis_pekerjaan], ';');
+            fputcsv($out, ['Karyawan', $projek->karyawan], ';');
+            fputcsv($out, [], ';');
+
+            $grand = 0.0;
+            foreach ($sections as $title => $rows) {
+                fputcsv($out, [$title], ';');
+                fputcsv($out, ['No', 'Nominal (IDR)', 'Keterangan'], ';');
+                $sub = 0.0;
+                $no = 1;
+                foreach ($rows as $row) {
+                    $nom = isset($row['nominal']) ? (float) $row['nominal'] : 0;
+                    $ket = isset($row['keterangan']) ? (string) $row['keterangan'] : '';
+                    $sub += $nom;
+                    fputcsv($out, [$no, number_format($nom, 2, ',', ''), $ket], ';');
+                    $no++;
+                }
+                fputcsv($out, ['Subtotal '.$title, number_format($sub, 2, ',', ''), ''], ';');
+                $grand += $sub;
+                fputcsv($out, [], ';');
+            }
+            fputcsv($out, ['TOTAL KESELURUHAN (IDR)', number_format($grand, 2, ',', ''), ''], ';');
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function setLunas(Request $request, $id)
+    {
+        if (! $this->isSuperAdmin($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya superadmin yang bisa mengubah status lunas.',
+            ], 403);
+        }
+
+        $request->validate([
+            'is_lunas' => 'required|boolean',
+        ]);
+
+        $projek = ProjekKerja::findOrFail($id);
+        $isLunas = (bool) $request->boolean('is_lunas');
+
+        $projek->update([
+            'is_lunas' => $isLunas,
+            'lunas_at' => $isLunas ? now() : null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $projek->fresh(),
         ]);
     }
 
@@ -347,7 +499,6 @@ class ProjekKerjaController extends Controller
     public function destroy($id)
     {
         $projek = ProjekKerja::with(['photos', 'files'])->findOrFail($id);
-
         foreach ($projek->photos as $photo) {
             if (Storage::disk('public')->exists($photo->photo)) {
                 Storage::disk('public')->delete($photo->photo);

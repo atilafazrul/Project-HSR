@@ -303,6 +303,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ProjekKerjaController::class,
         'updateUang'
     ]);
+    Route::patch('/projek-kerja/{id}/lunas', [
+        ProjekKerjaController::class,
+        'setLunas'
+    ]);
+
+    Route::get('/projek-kerja/{id}/export-biaya', [
+        ProjekKerjaController::class,
+        'exportBiayaCsv',
+    ]);
 
     // Tambahkan route untuk update data projek secara keseluruhan
     Route::put('/projek-kerja/{id}', [ProjekKerjaController::class, 'update']);
