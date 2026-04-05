@@ -503,7 +503,7 @@ export default function ProjekKerjaPage() {
 
       {/* ================= FORM ================= */}
       {(role === "admin" || role === "super_admin") && (
-        <div className="bg-white rounded-3xl shadow-xl border p-8">
+        <div className="bg-white rounded-3xl shadow-xl border p-4 sm:p-8 min-w-0 overflow-x-hidden">
           <div className="mb-8">
             <h2 className="text-3xl font-bold flex items-center gap-3">
               <Briefcase className="text-blue-600" />
@@ -516,7 +516,7 @@ export default function ProjekKerjaPage() {
 
           <form
             onSubmit={handleSubmit}
-            className="relative grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="relative grid min-w-0 grid-cols-1 md:grid-cols-2 gap-6 [&>*]:min-w-0"
             encType="multipart/form-data"
           >
             {(processingUpload || loading) && (
@@ -583,14 +583,14 @@ export default function ProjekKerjaPage() {
               />
             </div>
 
-            <div className="relative">
-              <Calendar className="absolute left-3 top-3 text-gray-400" size={18} />
+            <div className="relative min-w-0 w-full max-w-full overflow-hidden">
+              <Calendar className="absolute left-3 top-3 z-10 text-gray-400 pointer-events-none" size={18} />
               <input
                 type="date"
                 name="start_date"
                 value={form.start_date}
                 onChange={handleChange}
-                className="border pl-10 p-3 rounded-xl w-full min-w-0 max-w-full"
+                className="border box-border pl-10 pr-2 py-3 rounded-xl w-full min-w-0 max-w-full shrink text-base leading-normal"
                 required
               />
             </div>
