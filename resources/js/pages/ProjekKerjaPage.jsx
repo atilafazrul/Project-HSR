@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../api/axiosConfig";
+import { compressImage } from "../utils/imageCompress";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Download,
@@ -75,6 +76,7 @@ export default function ProjekKerjaPage() {
   const [form, setForm] = useState(initialForm);
   const [dataList, setDataList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [processingUpload, setProcessingUpload] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   // State untuk pagination
@@ -133,15 +135,29 @@ export default function ProjekKerjaPage() {
     }));
   };
 
-  const handleFileUpload = (e) => {
-    if (e.target.files[0]) {
-      setForm(prev => ({ ...prev, file: e.target.files[0] }));
+  const handleFileUpload = async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setProcessingUpload(true);
+    try {
+      const out = await compressImage(f);
+      setForm(prev => ({ ...prev, file: out }));
+    } finally {
+      setProcessingUpload(false);
     }
   };
 
-  const handlePhotoUpload = (e) => {
-    if (e.target.files) {
-      setForm(prev => ({ ...prev, photos: e.target.files }));
+  const handlePhotoUpload = async (e) => {
+    const list = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!list.length) return;
+    setProcessingUpload(true);
+    try {
+      const compressed = await Promise.all(list.map((file) => compressImage(file)));
+      setForm(prev => ({ ...prev, photos: compressed }));
+    } finally {
+      setProcessingUpload(false);
     }
   };
 
@@ -482,9 +498,19 @@ export default function ProjekKerjaPage() {
 
           <form
             onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="relative grid grid-cols-1 md:grid-cols-2 gap-6"
             encType="multipart/form-data"
           >
+            {(processingUpload || loading) && (
+              <div className="absolute inset-0 z-20 bg-white/75 backdrop-blur-[1px] flex items-center justify-center rounded-xl">
+                <div className="flex flex-col items-center gap-2 text-blue-700">
+                  <span className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm font-medium">
+                    {processingUpload ? "Mengompres file/foto..." : "Mengunggah..."}
+                  </p>
+                </div>
+              </div>
+            )}
             {role === "super_admin" ? (
               <select
                 name="divisi"
@@ -574,7 +600,13 @@ export default function ProjekKerjaPage() {
               <span className="text-xs text-gray-500">
                 {form.file ? form.file.name : "Choose file No file chosen"}
               </span>
-              <input id="uploadFile" type="file" onChange={handleFileUpload} className="hidden" />
+              <input
+                id="uploadFile"
+                type="file"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={processingUpload || loading}
+              />
             </label>
 
             <label
@@ -588,7 +620,15 @@ export default function ProjekKerjaPage() {
                   ? `${form.photos.length} foto dipilih`
                   : "Choose files No file chosen"}
               </span>
-              <input id="uploadFoto" type="file" multiple accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+              <input
+                id="uploadFoto"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                disabled={processingUpload || loading}
+              />
             </label>
 
             <textarea
@@ -615,9 +655,14 @@ export default function ProjekKerjaPage() {
               />
             </div>
 
+            <p className="text-xs text-gray-500 md:col-span-2 -mt-2">
+              Foto dan file gambar diperkecil otomatis (maks. sisi panjang 1600px) agar upload dari kamera lebih ringan.
+            </p>
+
             <button
-              disabled={loading}
-              className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-3 rounded-xl md:col-span-2 font-semibold shadow-lg transition"
+              type="submit"
+              disabled={loading || processingUpload}
+              className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-3 rounded-xl md:col-span-2 font-semibold shadow-lg transition disabled:opacity-60"
             >
               {loading ? "Menyimpan..." : "Simpan Projek"}
             </button>

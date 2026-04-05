@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../api/axiosConfig";
+import { compressImage } from "../utils/imageCompress";
 
 export default function FotoProjekPage() {
 
@@ -10,6 +11,7 @@ export default function FotoProjekPage() {
   const [photos, setPhotos] = useState([]);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploadBusy, setUploadBusy] = useState(false);
 
   // ================= AMBIL FOTO =================
   const fetchPhotos = async () => {
@@ -63,13 +65,13 @@ export default function FotoProjekPage() {
 
   // ================= TAMBAH FOTO =================
   const handleUploadPhoto = async (file) => {
-
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("photo", file);
-
+    setUploadBusy(true);
     try {
+      const ready = await compressImage(file);
+      const formData = new FormData();
+      formData.append("photo", ready);
 
       await axios.post(
         `${import.meta.env.VITE_API_URL}/projek-kerja/${id}/add-photo`,
@@ -78,22 +80,23 @@ export default function FotoProjekPage() {
       );
 
       fetchPhotos();
-
     } catch (err) {
       alert("Gagal upload foto");
+    } finally {
+      setUploadBusy(false);
     }
   };
 
 
   // ================= TAMBAH FILE =================
   const handleUploadFile = async (file) => {
-
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
-
+    setUploadBusy(true);
     try {
+      const ready = await compressImage(file);
+      const formData = new FormData();
+      formData.append("file", ready);
 
       await axios.post(
         `${import.meta.env.VITE_API_URL}/projek-kerja/${id}/add-file`,
@@ -102,9 +105,10 @@ export default function FotoProjekPage() {
       );
 
       fetchFiles();
-
     } catch (err) {
       alert("Gagal upload file");
+    } finally {
+      setUploadBusy(false);
     }
   };
 
@@ -153,7 +157,16 @@ export default function FotoProjekPage() {
 
 
   return (
-    <div className="p-10 bg-gray-50 min-h-screen">
+    <div className="relative p-10 bg-gray-50 min-h-screen">
+
+      {uploadBusy && (
+        <div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[1px] flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-lg px-8 py-6 flex flex-col items-center gap-2 text-gray-700">
+            <span className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm font-medium">Mengompres & mengunggah...</p>
+          </div>
+        </div>
+      )}
 
       {/* HEADER */}
       <div className="flex items-center justify-between mb-10">
@@ -256,9 +269,12 @@ export default function FotoProjekPage() {
         <input
           type="file"
           hidden
-          onChange={(e) =>
-            handleUploadFile(e.target.files[0])
-          }
+          disabled={uploadBusy}
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) await handleUploadFile(f);
+          }}
         />
 
       </label>
@@ -329,10 +345,14 @@ export default function FotoProjekPage() {
 
           <input
             type="file"
+            accept="image/*"
             hidden
-            onChange={(e) =>
-              handleUploadPhoto(e.target.files[0])
-            }
+            disabled={uploadBusy}
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) await handleUploadPhoto(f);
+            }}
           />
 
         </label>
