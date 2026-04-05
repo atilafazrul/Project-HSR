@@ -29,6 +29,7 @@ class ProjekKerja extends Model
         'biaya_jalan_items',
         'biaya_pengeluaran_items',
         'biaya_reimbursment_items',
+        'biaya_edit_meta',
         'is_lunas',
         'lunas_at',
     ];
@@ -43,6 +44,7 @@ class ProjekKerja extends Model
         'biaya_jalan_items' => 'array',
         'biaya_pengeluaran_items' => 'array',
         'biaya_reimbursment_items' => 'array',
+        'biaya_edit_meta' => 'array',
         'is_lunas' => 'boolean',
         'lunas_at' => 'datetime',
         'created_at' => 'datetime',

@@ -21,6 +21,24 @@ import {
   Plus
 } from "lucide-react";
 
+function BiayaMetaFooter({ meta }) {
+  if (!meta?.by) return null;
+  const d = meta.at ? new Date(meta.at) : null;
+  const dateStr =
+    d && !Number.isNaN(d.getTime())
+      ? d.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
+      : "";
+  return (
+    <p className="text-[11px] text-gray-500 mt-2 pt-2 border-t border-gray-200/80 flex items-start gap-1.5">
+      <User size={12} className="shrink-0 mt-0.5 text-gray-400" />
+      <span>
+        Terakhir diubah: <span className="font-medium text-gray-600">{meta.by}</span>
+        {dateStr ? <span className="text-gray-400"> · {dateStr}</span> : null}
+      </span>
+    </p>
+  );
+}
+
 export default function ProjekKerjaPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1041,6 +1059,8 @@ export default function ProjekKerjaPage() {
                     { key: "reimbursment", label: "Biaya Reimbursment", rows: biayaEdit.reimbursment },
                   ].map((col) => {
                     const shown = displayBiayaRows(col.rows);
+                    const rowItem = dataList.find((i) => i.id === currentId);
+                    const meta = rowItem?.biaya_edit_meta?.[col.key];
                     return (
                     <div key={col.key} className="border rounded-xl p-3 bg-gray-50/80">
                       <p className="font-semibold text-gray-800 mb-2">{col.label}</p>
@@ -1061,6 +1081,7 @@ export default function ProjekKerjaPage() {
                       <p className="mt-2 pt-2 border-t text-amber-800 font-semibold">
                         Subtotal: {formatRupiah(sumBiayaRows(col.rows))}
                       </p>
+                      <BiayaMetaFooter meta={meta} />
                     </div>
                     );
                   })}
@@ -1127,7 +1148,10 @@ export default function ProjekKerjaPage() {
                     { key: "jalan", label: "Biaya Jalan & Keterangan", color: "border-emerald-200 bg-emerald-50/50" },
                     { key: "pengeluaran", label: "Biaya Pengeluaran & Keterangan", color: "border-blue-200 bg-blue-50/50" },
                     { key: "reimbursment", label: "Biaya Reimbursment & Keterangan", color: "border-violet-200 bg-violet-50/50" },
-                  ].map((col) => (
+                  ].map((col) => {
+                    const editItem = dataList.find((i) => i.id === currentId);
+                    const meta = editItem?.biaya_edit_meta?.[col.key];
+                    return (
                     <div key={col.key} className={`rounded-xl border p-3 ${col.color}`}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-semibold text-sm text-gray-800">{col.label}</span>
@@ -1175,8 +1199,10 @@ export default function ProjekKerjaPage() {
                       <p className="mt-2 text-sm font-semibold text-gray-800">
                         Subtotal: {formatRupiah(sumBiayaRows(biayaEdit[col.key]))}
                       </p>
+                      <BiayaMetaFooter meta={meta} />
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
                   <p className="text-base font-bold text-amber-900">

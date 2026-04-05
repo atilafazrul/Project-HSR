@@ -56,6 +56,57 @@ class ProjekKerjaController extends Controller
         return $out;
     }
 
+    protected function biayaEditorLabel(Request $request): string
+    {
+        $u = $request->user();
+        if (! $u) {
+            return 'Tidak diketahui';
+        }
+        $name = trim((string) ($u->name ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        return (string) ($u->email ?? 'User #'.$u->id);
+    }
+
+    /**
+     * @return array<string, array{by: string, at: string}>
+     */
+    protected function mergeBiayaEditMetaAfterCompare(
+        ProjekKerja $projek,
+        Request $request,
+        array $newJalan,
+        array $newPengeluaran,
+        array $newReimbursment
+    ): array {
+        $meta = $projek->biaya_edit_meta;
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+        $label = $this->biayaEditorLabel($request);
+        $entry = [
+            'by' => $label,
+            'at' => now()->toIso8601String(),
+        ];
+
+        $oldJ = $projek->biaya_jalan_items ?? [];
+        $oldP = $projek->biaya_pengeluaran_items ?? [];
+        $oldR = $projek->biaya_reimbursment_items ?? [];
+
+        if (json_encode($oldJ) !== json_encode($newJalan)) {
+            $meta['jalan'] = $entry;
+        }
+        if (json_encode($oldP) !== json_encode($newPengeluaran)) {
+            $meta['pengeluaran'] = $entry;
+        }
+        if (json_encode($oldR) !== json_encode($newReimbursment)) {
+            $meta['reimbursment'] = $entry;
+        }
+
+        return $meta;
+    }
+
     /* ======================================================
        GET ALL
     ====================================================== */
@@ -125,6 +176,28 @@ class ProjekKerjaController extends Controller
                 'biaya_reimbursment_items' => $this->filterBiayaItems($request->input('biaya_reimbursment_items')),
             ]);
 
+            $meta = [];
+            $label = $this->biayaEditorLabel($request);
+            $entry = [
+                'by' => $label,
+                'at' => now()->toIso8601String(),
+            ];
+            $j = $projek->biaya_jalan_items ?? [];
+            $p = $projek->biaya_pengeluaran_items ?? [];
+            $r = $projek->biaya_reimbursment_items ?? [];
+            if (! empty($j)) {
+                $meta['jalan'] = $entry;
+            }
+            if (! empty($p)) {
+                $meta['pengeluaran'] = $entry;
+            }
+            if (! empty($r)) {
+                $meta['reimbursment'] = $entry;
+            }
+            if ($meta !== []) {
+                $projek->update(['biaya_edit_meta' => $meta]);
+            }
+
             /* ================= FILE UPLOAD ================= */
             if ($request->hasFile('file')) {
                 $file = $request->file('file');
@@ -163,7 +236,7 @@ class ProjekKerjaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $projek
+                'data' => $projek->fresh(),
             ], 201);
 
         } catch (\Exception $e) {
@@ -222,11 +295,40 @@ class ProjekKerjaController extends Controller
             $data['biaya_reimbursment_items'] = $this->filterBiayaItems($request->input('biaya_reimbursment_items'));
         }
 
+        $biayaTouched = isset($data['biaya_jalan_items']) || isset($data['biaya_pengeluaran_items']) || isset($data['biaya_reimbursment_items']);
+        if ($biayaTouched) {
+            $meta = is_array($projek->biaya_edit_meta) ? $projek->biaya_edit_meta : [];
+            $label = $this->biayaEditorLabel($request);
+            $entry = [
+                'by' => $label,
+                'at' => now()->toIso8601String(),
+            ];
+            if (isset($data['biaya_jalan_items'])) {
+                $old = $projek->biaya_jalan_items ?? [];
+                if (json_encode($old) !== json_encode($data['biaya_jalan_items'])) {
+                    $meta['jalan'] = $entry;
+                }
+            }
+            if (isset($data['biaya_pengeluaran_items'])) {
+                $old = $projek->biaya_pengeluaran_items ?? [];
+                if (json_encode($old) !== json_encode($data['biaya_pengeluaran_items'])) {
+                    $meta['pengeluaran'] = $entry;
+                }
+            }
+            if (isset($data['biaya_reimbursment_items'])) {
+                $old = $projek->biaya_reimbursment_items ?? [];
+                if (json_encode($old) !== json_encode($data['biaya_reimbursment_items'])) {
+                    $meta['reimbursment'] = $entry;
+                }
+            }
+            $data['biaya_edit_meta'] = $meta;
+        }
+
         $projek->update($data);
 
         return response()->json([
             'success' => true,
-            'data' => $projek
+            'data' => $projek->fresh(),
         ]);
     }
 
@@ -405,10 +507,24 @@ class ProjekKerjaController extends Controller
         if ($resp = $this->rejectIfLockedForAdmin($request, $projek)) {
             return $resp;
         }
+
+        $newJalan = $this->filterBiayaItems($request->input('biaya_jalan_items'));
+        $newPengeluaran = $this->filterBiayaItems($request->input('biaya_pengeluaran_items'));
+        $newReimbursment = $this->filterBiayaItems($request->input('biaya_reimbursment_items'));
+
+        $meta = $this->mergeBiayaEditMetaAfterCompare(
+            $projek,
+            $request,
+            $newJalan,
+            $newPengeluaran,
+            $newReimbursment
+        );
+
         $projek->update([
-            'biaya_jalan_items' => $this->filterBiayaItems($request->input('biaya_jalan_items')),
-            'biaya_pengeluaran_items' => $this->filterBiayaItems($request->input('biaya_pengeluaran_items')),
-            'biaya_reimbursment_items' => $this->filterBiayaItems($request->input('biaya_reimbursment_items')),
+            'biaya_jalan_items' => $newJalan,
+            'biaya_pengeluaran_items' => $newPengeluaran,
+            'biaya_reimbursment_items' => $newReimbursment,
+            'biaya_edit_meta' => $meta,
         ]);
 
         return response()->json([
