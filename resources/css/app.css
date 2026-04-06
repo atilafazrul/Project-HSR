@@ -107,3 +107,33 @@ body {
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
 }
+
+/* ================= iOS Safari: date input height / stray divider ================= */
+
+.projek-kerja-date-input {
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 0;
+    height: 3rem; /* same visual row as pl-10 p-3 text inputs */
+    color-scheme: light;
+}
+
+.projek-kerja-date-input::-webkit-date-and-time-value {
+    text-align: left;
+}
+
+.projek-kerja-date-input::-webkit-datetime-edit,
+.projek-kerja-date-input::-webkit-datetime-edit-fields-wrapper {
+    padding-block: 0;
+    padding-inline: 0;
+}
+
+.projek-kerja-date-input::-webkit-datetime-edit-text {
+    padding: 0 0.15em;
+}
+
+.projek-kerja-date-input::-webkit-calendar-picker-indicator {
+    opacity: 0.55;
+    margin-inline-start: 0.25rem;
+}

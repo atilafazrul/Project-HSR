@@ -583,14 +583,17 @@ export default function ProjekKerjaPage() {
               />
             </div>
 
-            <div className="relative min-w-0 w-full max-w-full overflow-hidden">
-              <Calendar className="absolute left-3 top-3 z-10 text-gray-400 pointer-events-none" size={18} />
+            <div className="relative mx-auto min-w-0 w-full max-w-[min(100%,17rem)] overflow-hidden md:mx-0 md:max-w-none">
+              <Calendar
+                className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
               <input
                 type="date"
                 name="start_date"
                 value={form.start_date}
                 onChange={handleChange}
-                className="border box-border pl-10 pr-2 py-3 rounded-xl w-full min-w-0 max-w-full shrink text-base leading-normal"
+                className="projek-kerja-date-input w-full min-w-0 max-w-full shrink rounded-xl border pl-10 pr-3 text-base leading-none outline-none focus:ring-2 focus:ring-blue-400/40"
                 required
               />
             </div>
