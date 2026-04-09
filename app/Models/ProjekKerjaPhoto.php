@@ -34,6 +34,8 @@ class ProjekKerjaPhoto extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $appends = ['url'];
+
 
     /* =============================
        RELATION KE PROJECT

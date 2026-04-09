@@ -17,6 +17,16 @@ class ProjekKerjaFile extends Model
         'file'
     ];
 
+    protected $appends = ['url'];
+
+    public function getUrlAttribute()
+    {
+        if ($this->file) {
+            return asset('storage/' . $this->file);
+        }
+        return null;
+    }
+
 
     /* =========================================
        RELASI KE PROJEK KERJA

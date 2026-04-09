@@ -11,6 +11,8 @@ import {
   Check,
   Plus,
   Trash2,
+  X,
+  Edit,
 } from "lucide-react";
 
 export default function pdfForm({
@@ -27,19 +29,36 @@ export default function pdfForm({
   onReset,
   loading,
   user,
+  isEditing,
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {/* HEADER FORM CARD */}
       <div className="bg-white rounded-3xl shadow-md p-8">
 
+        {/* EDITING INDICATOR */}
+        {isEditing && (
+          <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+              <Edit size={20} className="text-orange-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-orange-800">Mode Edit</p>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-3 mb-8 pb-4 border-b">
           <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
             <FileText size={24} className="text-blue-600" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold">Form Service Report</h3>
-            <p className="text-gray-500 text-sm">Isi data lengkap untuk membuat dokumen service report</p>
+            <h3 className="text-xl font-semibold">
+              {isEditing ? "Edit Service Report" : "Form Service Report"}
+            </h3>
+            <p className="text-gray-500 text-sm">
+              {isEditing ? "Perbarui data dokumen service report" : "Isi data lengkap untuk membuat dokumen service report"}
+            </p>
           </div>
         </div>
 
@@ -102,9 +121,19 @@ export default function pdfForm({
         <button
           type="button"
           onClick={onReset}
-          className="px-6 py-3 rounded-xl font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+          className={`px-6 py-3 rounded-xl font-medium transition flex items-center gap-2 ${isEditing
+              ? "text-orange-700 bg-orange-100 hover:bg-orange-200"
+              : "text-gray-700 bg-gray-200 hover:bg-gray-300"
+            }`}
         >
-          Reset Form
+          {isEditing ? (
+            <>
+              <X size={18} />
+              Batal Edit
+            </>
+          ) : (
+            "Reset Form"
+          )}
         </button>
         <button
           type="submit"
@@ -114,12 +143,12 @@ export default function pdfForm({
           {loading ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Menyimpan...
+              {isEditing ? "Menyimpan..." : "Menyimpan..."}
             </>
           ) : (
             <>
               <FileText size={18} />
-              Simpan Dokumen
+              {isEditing ? "Simpan Perubahan" : "Simpan Dokumen"}
             </>
           )}
         </button>

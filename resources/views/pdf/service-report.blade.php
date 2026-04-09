@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <style>
         @page {
-            margin: 50mm 30mm 30mm 30mm;
+            margin: 40mm 28mm 25mm 28mm;
         }
 
         * {
@@ -16,9 +16,9 @@
 
         body {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 13px;
+            font-size: 11px;
             color: #000;
-            line-height: 1.4;
+            line-height: 1.3;
             position: relative;
             min-height: 100%;
         }
@@ -26,8 +26,8 @@
         /* Container untuk seluruh konten dengan margin */
         .page-container {
             position: relative;
-            min-height: 230mm;
-            padding: 0 10mm 30mm 10mm;
+            min-height: 200mm;
+            padding: 0 8mm 5mm 8mm;
         }
 
         table {
@@ -42,14 +42,14 @@
         /* HEADER SECTION */
         .header-table {
             width: 100%;
-            margin-top: 20px;
+            margin-top: 15px;
             border-bottom: 2px solid #000;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
         }
 
         .header-logo {
-            height: 60px;
+            height: 50px;
             width: auto;
             max-width: 100%;
             object-fit: contain;
@@ -72,26 +72,26 @@
         }
 
         .company-name {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             letter-spacing: 1px;
         }
 
         .address-info {
-            font-size: 11px;
-            line-height: 1.4;
+            font-size: 10px;
+            line-height: 1.3;
         }
 
         /* SERVICE REPORT TITLE */
         .report-title-container {
             text-align: center;
-            margin-top: 8px;
-            margin-bottom: 12px;
+            margin-top: 5px;
+            margin-bottom: 8px;
         }
 
         .report-title {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: bold;
             text-decoration: underline;
             color: #000;
@@ -101,13 +101,13 @@
         .form-table {
             width: 100%;
             border: 1px solid #000;
-            margin-top: 5px;
+            margin-top: 3px;
         }
 
         .form-table td {
-            padding: 6px 10px;
+            padding: 4px 8px;
             border: 1px solid #000;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .label {
@@ -117,7 +117,7 @@
 
         /* CHECKBOX TABLE STYLE */
         .checkbox-container {
-            margin-top: 5px;
+            margin-top: 3px;
             width: 100%;
         }
 
@@ -127,23 +127,23 @@
 
         .checkbox-table td {
             border: 1px solid #000;
-            padding: 5px 8px;
-            font-size: 11px;
+            padding: 3px 6px;
+            font-size: 10px;
             vertical-align: middle;
         }
 
         .checkbox-square {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border: 1px solid #000;
             text-align: center;
-            line-height: 11px;
-            margin-right: 5px;
+            line-height: 9px;
+            margin-right: 4px;
             background: #fff;
             vertical-align: middle;
             font-weight: bold;
-            font-size: 9px;
+            font-size: 8px;
         }
 
         .checkbox-label {
@@ -155,11 +155,11 @@
         .section-header {
             background-color: #e0e0e0;
             font-weight: bold;
-            padding: 6px 12px;
+            padding: 4px 10px;
             border: 1px solid #000;
-            margin-top: 12px;
+            margin-top: 6px;
             text-transform: uppercase;
-            font-size: 13px;
+            font-size: 11px;
         }
 
         /* DATA TABLES */
@@ -170,38 +170,38 @@
         .data-table th {
             background-color: #f0f0f0;
             border: 1px solid #000;
-            padding: 6px 8px;
+            padding: 4px 6px;
             font-weight: bold;
             text-align: center;
-            font-size: 11px;
+            font-size: 10px;
         }
 
         .data-table td {
             border: 1px solid #000;
-            padding: 5px 8px;
-            font-size: 11px;
+            padding: 3px 6px;
+            font-size: 10px;
         }
 
         /* BOXES */
         .box-description {
             border: 1px solid #000;
-            min-height: 40px;
-            padding: 8px;
-            margin-top: 5px;
+            min-height: 20px;
+            padding: 4px;
+            margin-top: 3px;
             background-color: transparent;
-            font-size: 11px;
-            line-height: 1.4;
+            font-size: 10px;
+            line-height: 1.3;
         }
 
         /* SIGNATURE SECTION */
         .signature-section {
             width: 100%;
-            margin-top: 20px;
-            margin-bottom: 15px;
+            margin-top: 8px;
+            margin-bottom: 5px;
         }
 
         .signature-section td {
-            padding: 12px;
+            padding: 8px;
         }
 
         /* FIXED FOOTER */
@@ -212,7 +212,7 @@
             right: 0;
             width: 100%;
             background: white;
-            padding: 10mm 0;
+            padding: 8mm 0;
             z-index: 1000;
         }
 
@@ -236,7 +236,7 @@
         }
 
         .footer-logo-img {
-            height: 40px;
+            height: 35px;
             width: auto;
             max-width: 100%;
             object-fit: contain;
@@ -293,7 +293,7 @@
 
         <div class="report-title-container">
             <div class="report-title">SERVICE REPORT</div>
-            <div style="font-size: 12px; margin-top: 4px;">Report No: {{ $report->report_no ?? '.................' }}
+            <div style="font-size: 11px; margin-top: 2px;">Report No: {{ $report->report_no ?? '.................' }}
             </div>
         </div>
 
@@ -318,6 +318,7 @@
                     ['key' => 'installation', 'label' => 'Installation'],
                     ['key' => 'escalation', 'label' => 'Escalation'],
                     ['key' => 'service_contract', 'label' => 'Service Contract'],
+                    ['key' => 'service', 'label' => 'Service'],
                     ['key' => 'training', 'label' => 'Training'],
                     ['key' => 'kso', 'label' => 'KSO'],
                     ['key' => 'preventive_maintenance', 'label' => 'Preventive Maintenance'],
@@ -354,7 +355,7 @@
         </div>
 
         <div class="section-header">Equipment Information</div>
-        <table class="data-table" style="margin-top: 5px;">
+        <table class="data-table" style="margin-top: 3px;">
             <thead>
                 <tr>
                     <th width="15%">Brand</th>
@@ -382,7 +383,7 @@
         </table>
 
         <div class="section-header">Parts Replacement</div>
-        <table class="data-table" style="margin-top: 5px;">
+        <table class="data-table" style="margin-top: 3px;">
             <thead>
                 <tr>
                     <th width="5%">No</th>
@@ -394,7 +395,11 @@
                 </tr>
             </thead>
             <tbody>
-                @if(isset($report->parts) && count($report->parts) > 0)
+                @php
+                    $partsCount = isset($report->parts) ? count($report->parts) : 0;
+                    $minRows = max(1, min($partsCount, 2));
+                @endphp
+                @if($partsCount > 0)
                     @foreach($report->parts as $index => $part)
                         <tr>
                             <td align="center">{{ $index + 1 }}</td>
@@ -406,7 +411,7 @@
                         </tr>
                     @endforeach
                 @else
-                    @for($i = 1; $i <= 3; $i++)
+                    @for($i = 1; $i <= $minRows; $i++)
                         <tr>
                             <td align="center">{{ $i }}</td>
                             <td>&nbsp;</td>
@@ -420,35 +425,35 @@
             </tbody>
         </table>
 
-        <div style="margin-top: 12px;">
-            <strong style="font-size: 12px;">Problem Description:</strong>
+        <div style="margin-top: 6px;">
+            <strong style="font-size: 11px;">Problem Description:</strong>
             <div class="box-description">{{ $report->problem_description ?? '' }}</div>
         </div>
-        <div style="margin-top: 8px;">
-            <strong style="font-size: 12px;">Service Performed:</strong>
+        <div style="margin-top: 5px;">
+            <strong style="font-size: 11px;">Service Performed:</strong>
             <div class="box-description">{{ $report->service_performed ?? '' }}</div>
         </div>
-        <div style="margin-top: 8px;">
-            <strong style="font-size: 12px;">Recommendation:</strong>
+        <div style="margin-top: 5px;">
+            <strong style="font-size: 11px;">Recommendation:</strong>
             <div class="box-description">{{ $report->recommendation ?? '' }}</div>
         </div>
 
         <table class="signature-section">
             <tr>
                 <td width="50%" align="center">
-                    <div style="margin-bottom: 50px; font-size: 12px;">
+                    <div style="margin-bottom: 80px; font-size: 11px;">
                         Tangerang,
                         {{ isset($report->completed_date) ? \Carbon\Carbon::parse($report->completed_date)->format('d F Y') : '........................' }}
                     </div>
                     <div
-                        style="border-top: 1px solid #000; padding-top: 5px; min-width: 200px; display: inline-block; font-size: 12px;">
+                        style="border-top: 1px solid #000; padding-top: 3px; min-width: 180px; display: inline-block; font-size: 11px;">
                         ( {{ $report->nama_teknisi ?? '........................' }} )
                     </div>
                 </td>
                 <td width="50%" align="center">
-                    <div style="margin-bottom: 50px; font-size: 12px;">Customer (Sign & Stamp)</div>
+                    <div style="margin-bottom: 80px; font-size: 11px;">Customer</div>
                     <div
-                        style="border-top: 1px solid #000; padding-top: 5px; min-width: 200px; display: inline-block; font-size: 12px;">
+                        style="border-top: 1px solid #000; padding-top: 3px; min-width: 180px; display: inline-block; font-size: 11px;">
                         ( {{ $report->nama_client ?? '........................' }} )
                     </div>
                 </td>

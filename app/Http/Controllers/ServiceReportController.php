@@ -228,14 +228,86 @@ class ServiceReportController extends Controller
             'nama_client' => 'nullable|string|max:255',
             'kota' => 'nullable|string|max:255',
             'tanggal' => 'required|date',
+            'checkboxes' => 'nullable|array',
+            'checkboxes.*' => 'string',
+            'partsList' => 'nullable|array',
+            'partsList.*.name' => 'nullable|string',
+            'partsList.*.part_no' => 'nullable|string',
+            'partsList.*.in' => 'nullable|string',
+            'partsList.*.out' => 'nullable|string',
+            'partsList.*.qty' => 'nullable|integer',
         ]);
 
-        $report->update($validated);
+        try {
+            DB::beginTransaction();
 
-        return response()->json([
-            'success' => true,
-            'data' => $report->load(['serviceTypes', 'parts'])
-        ]);
+            $report->update([
+                'customer' => $validated['customer'],
+                'contact_person' => $validated['contact_person'] ?? null,
+                'phone' => $validated['phone'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'brand' => $validated['brand'] ?? null,
+                'model' => $validated['model'] ?? null,
+                'serial_no' => $validated['serial_no'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'start_date' => $validated['start_date'] ?? null,
+                'completed_date' => $validated['completed_date'] ?? null,
+                'problem_description' => $validated['problem_description'] ?? null,
+                'service_performed' => $validated['service_performed'] ?? null,
+                'recommendation' => $validated['recommendation'] ?? null,
+                'nama_teknisi' => $validated['nama_teknisi'],
+                'nama_client' => $validated['nama_client'] ?? null,
+                'kota' => $validated['kota'] ?? null,
+                'tanggal' => $validated['tanggal'],
+            ]);
+
+            // Update Service Types - delete existing and create new
+            if (isset($validated['checkboxes'])) {
+                ServiceType::where('service_report_id', $report->id)->delete();
+                foreach ($validated['checkboxes'] as $type) {
+                    ServiceType::create([
+                        'service_report_id' => $report->id,
+                        'type' => $type,
+                    ]);
+                }
+            }
+
+            // Update Parts - delete existing and create new
+            if (isset($validated['partsList'])) {
+                ServiceReportPart::where('service_report_id', $report->id)->delete();
+                foreach ($validated['partsList'] as $part) {
+                    if (
+                        !empty($part['name']) || !empty($part['part_no']) ||
+                        !empty($part['in']) || !empty($part['out']) || !empty($part['qty'])
+                    ) {
+                        ServiceReportPart::create([
+                            'service_report_id' => $report->id,
+                            'part_name' => $part['name'] ?? null,
+                            'part_no' => $part['part_no'] ?? null,
+                            'in' => $part['in'] ?? null,
+                            'out' => $part['out'] ?? null,
+                            'qty' => $part['qty'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service Report berhasil diperbarui',
+                'data' => $report->load(['serviceTypes', 'parts'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui Service Report',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

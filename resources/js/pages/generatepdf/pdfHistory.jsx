@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Filter, FileText, User, Eye, Download, MapPin, X, Calendar, Wrench } from "lucide-react";
+import { Search, Filter, FileText, User, Eye, Download, MapPin, X, Calendar, Wrench, Edit } from "lucide-react";
 
 // Format tanggal dari ISO string ke format yang lebih mudah dibaca
 const formatDate = (dateString) => {
@@ -24,6 +24,7 @@ export default function pdfHistory({
   onView,
   closeViewModal,
   onGeneratePDF,
+  onEdit,
   selectedItem,
 }) {
   return (
@@ -112,6 +113,13 @@ export default function pdfHistory({
                           title="Lihat detail"
                         >
                           <Eye size={18} />
+                        </button>
+                        <button
+                          onClick={() => onEdit(item)}
+                          className="p-2 rounded-lg text-orange-600 hover:bg-orange-50 transition"
+                          title="Edit dokumen"
+                        >
+                          <Edit size={18} />
                         </button>
                         <button
                           onClick={() => onGeneratePDF(item)}

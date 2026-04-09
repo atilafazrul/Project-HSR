@@ -23,7 +23,7 @@ export default function FotoProjekPage() {
       );
 
       if (res.data.success) {
-        setPhotos(res.data.photos);
+        setPhotos(res.data.photos || []);
       }
 
     } catch (err) {
@@ -43,7 +43,7 @@ export default function FotoProjekPage() {
       );
 
       if (res.data.success) {
-        setFiles(res.data.files);
+        setFiles(res.data.files || []);
       }
 
     } catch (err) {

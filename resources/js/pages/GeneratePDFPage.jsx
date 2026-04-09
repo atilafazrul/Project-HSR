@@ -43,6 +43,10 @@ export default function GeneratePDFPage({ user }) {
     handleView,
     closeViewModal,
     handleGeneratePDF,
+    handleEdit,
+    cancelEdit,
+    isEditing,
+    fetchHistory,
   } = usePdf(user, currentDivisi);
 
   return (
@@ -51,9 +55,11 @@ export default function GeneratePDFPage({ user }) {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="text-3xl font-bold">Generate Service Report</h2>
+            <h2 className="text-3xl font-bold">
+              {isEditing ? "Edit Service Report" : "Generate Service Report"}
+            </h2>
             <p className="text-gray-500">
-              Divisi {currentDivisi} - Buat dan kelola dokumen Service Report
+              Divisi {currentDivisi} - {isEditing ? "Edit dokumen" : "Buat dan kelola dokumen Service Report"}
             </p>
           </div>
         </div>
@@ -62,17 +68,35 @@ export default function GeneratePDFPage({ user }) {
       {/* TABS */}
       <div className="flex gap-2 mb-6">
         <button
-          onClick={() => setActiveTab("form")}
+          onClick={() => {
+            if (isEditing) {
+              if (window.confirm("Anda sedang mengedit dokumen. Yakin ingin membatalkan dan membuat dokumen baru?")) {
+                cancelEdit();
+                setActiveTab("form");
+              }
+            } else {
+              setActiveTab("form");
+            }
+          }}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition ${activeTab === "form"
             ? "bg-blue-600 text-white"
             : "bg-white text-gray-600 hover:bg-gray-100"
             }`}
         >
           <Plus size={18} />
-          Buat Baru
+          {isEditing ? "Edit Dokumen" : "Buat Baru"}
         </button>
         <button
-          onClick={() => setActiveTab("history")}
+          onClick={() => {
+            if (isEditing) {
+              if (window.confirm("Anda sedang mengedit dokumen. Yakin ingin membatalkan dan melihat riwayat?")) {
+                cancelEdit();
+                setActiveTab("history");
+              }
+            } else {
+              setActiveTab("history");
+            }
+          }}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition ${activeTab === "history"
             ? "bg-blue-600 text-white"
             : "bg-white text-gray-600 hover:bg-gray-100"
@@ -97,9 +121,10 @@ export default function GeneratePDFPage({ user }) {
             onAddParts: handleAddParts,
             onRemoveParts: handleRemoveParts,
             onSubmit: handleSubmit,
-            onReset: resetForm,
+            onReset: isEditing ? cancelEdit : resetForm,
             loading,
             user,
+            isEditing,
           })}
         </div>
       ) : (
@@ -118,6 +143,7 @@ export default function GeneratePDFPage({ user }) {
               onView: handleView,
               closeViewModal,
               onGeneratePDF: handleGeneratePDF,
+              onEdit: handleEdit,
               selectedItem,
             })
           )}

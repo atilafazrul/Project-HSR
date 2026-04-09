@@ -647,7 +647,7 @@ class ProjekKerjaController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $projek->photos
+            'photos' => $projek->photos
         ]);
     }
 
@@ -741,7 +741,7 @@ class ProjekKerjaController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $projek->files
+            'files' => $projek->files
         ]);
     }
 

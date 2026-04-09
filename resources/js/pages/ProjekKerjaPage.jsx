@@ -349,9 +349,9 @@ export default function ProjekKerjaPage() {
       fetchData();
     } catch (err) {
       console.error("Error response:", err.response?.data);
-      const errorMsg = err.response?.data?.message || 
-                       (err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join("\n") : null) ||
-                       "Gagal simpan data";
+      const errorMsg = err.response?.data?.message ||
+        (err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join("\n") : null) ||
+        "Gagal simpan data";
       alert(errorMsg);
     } finally {
       setLoading(false);
@@ -932,9 +932,6 @@ export default function ProjekKerjaPage() {
               />
             </div>
 
-            <p className="text-xs text-gray-500 md:col-span-2 -mt-2">
-              Foto dan file gambar diperkecil otomatis (maks. sisi panjang 1600px) agar upload dari kamera lebih ringan.
-            </p>
 
             <button
               type="submit"
@@ -1367,8 +1364,8 @@ export default function ProjekKerjaPage() {
                     Total keseluruhan:{" "}
                     {formatRupiah(
                       sumBiayaRows(biayaEdit.jalan) +
-                        sumBiayaRows(biayaEdit.pengeluaran) +
-                        sumBiayaRows(biayaEdit.reimbursment)
+                      sumBiayaRows(biayaEdit.pengeluaran) +
+                      sumBiayaRows(biayaEdit.reimbursment)
                     )}
                   </p>
                 </div>
@@ -1490,8 +1487,8 @@ export default function ProjekKerjaPage() {
                     Total keseluruhan:{" "}
                     {formatRupiah(
                       sumBiayaRows(biayaEdit.jalan) +
-                        sumBiayaRows(biayaEdit.pengeluaran) +
-                        sumBiayaRows(biayaEdit.reimbursment)
+                      sumBiayaRows(biayaEdit.pengeluaran) +
+                      sumBiayaRows(biayaEdit.reimbursment)
                     )}
                   </p>
                 </div>

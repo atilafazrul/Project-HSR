@@ -6,6 +6,8 @@ export const usePdf = (user, currentDivisi = "IT") => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [fetchingHistory, setFetchingHistory] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editId, setEditId] = useState(null);
 
   // ================= FORM STATE =================
   const [formData, setFormData] = useState({
@@ -33,6 +35,7 @@ export const usePdf = (user, currentDivisi = "IT") => {
     installation: false,
     escalation: false,
     service_contract: false,
+    service: false,
     training: false,
     kso: false,
     preventive_maintenance: false,
@@ -105,6 +108,7 @@ export const usePdf = (user, currentDivisi = "IT") => {
       installation: false,
       escalation: false,
       service_contract: false,
+      service: false,
       training: false,
       kso: false,
       preventive_maintenance: false,
@@ -237,13 +241,20 @@ export const usePdf = (user, currentDivisi = "IT") => {
         user_id: user?.id,
       };
 
-      const response = await api.post("/service-reports", submitData);
+      let response;
+      if (isEditing && editId) {
+        response = await api.put(`/service-reports/${editId}`, submitData);
+      } else {
+        response = await api.post("/service-reports", submitData);
+      }
 
       const result = response.data;
 
       if (response.status === 200 || response.status === 201) {
-        alert("Dokumen berhasil disimpan!");
+        alert(isEditing ? "Dokumen berhasil diperbarui!" : "Dokumen berhasil disimpan!");
         resetForm();
+        setIsEditing(false);
+        setEditId(null);
         setActiveTab("history");
         // Refresh history
         await fetchHistory();
@@ -270,6 +281,84 @@ export const usePdf = (user, currentDivisi = "IT") => {
 
   const closeViewModal = () => {
     setSelectedItem(null);
+  };
+
+  // ================= EDIT FUNCTIONALITY =================
+  const handleEdit = async (item) => {
+    try {
+      const response = await api.get(`/service-reports/${item.id}`);
+      const result = response.data;
+
+      if (result.success) {
+        const data = result.data;
+
+        setFormData({
+          customer: data.customer || "",
+          contact_person: data.contact_person || "",
+          phone: data.phone || "",
+          address: data.address || "",
+          brand: data.brand || "",
+          model: data.model || "",
+          serial_no: data.serial_no || "",
+          start_date: data.start_date ? data.start_date.split('T')[0] : "",
+          completed_date: data.completed_date ? data.completed_date.split('T')[0] : "",
+          description: data.description || "",
+          problem_description: data.problem_description || "",
+          service_performed: data.service_performed || "",
+          recommendation: data.recommendation || "",
+          nama_teknisi: data.nama_teknisi || "",
+          nama_client: data.nama_client || "",
+          kota: data.kota || "",
+          tanggal: data.tanggal ? data.tanggal.split('T')[0] : new Date().toISOString().split('T')[0],
+        });
+
+        const types = data.service_types || data.serviceTypes || [];
+        const typeKeys = types.map(t => t.type);
+        const newCheckboxes = {
+          installation: typeKeys.includes('installation'),
+          escalation: typeKeys.includes('escalation'),
+          service_contract: typeKeys.includes('service_contract'),
+          service: typeKeys.includes('service'),
+          training: typeKeys.includes('training'),
+          kso: typeKeys.includes('kso'),
+          preventive_maintenance: typeKeys.includes('preventive_maintenance'),
+          on_call: typeKeys.includes('on_call'),
+          update: typeKeys.includes('update'),
+          warranty: typeKeys.includes('warranty'),
+          demo_backup: typeKeys.includes('demo_backup'),
+        };
+        setCheckboxes(newCheckboxes);
+
+        const parts = data.parts || [];
+        if (parts.length > 0) {
+          const mappedParts = parts.map((part, index) => ({
+            id: index + 1,
+            name: part.part_name || "",
+            part_no: part.part_no || "",
+            in: part.in || "",
+            out: part.out || "",
+            qty: part.qty || "",
+          }));
+          setPartsList(mappedParts);
+        } else {
+          setPartsList([{ id: 1, name: "", part_no: "", in: "", out: "", qty: "" }]);
+        }
+
+        setEditId(item.id);
+        setIsEditing(true);
+        setActiveTab("form");
+        setSelectedItem(null);
+      }
+    } catch (error) {
+      console.error("Error fetching report detail:", error);
+      alert("Gagal memuat data untuk diedit");
+    }
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditId(null);
+    resetForm();
   };
 
   const handleGeneratePDF = async (item) => {
@@ -318,6 +407,7 @@ export const usePdf = (user, currentDivisi = "IT") => {
     installation: "Installation",
     escalation: "Escalation",
     service_contract: "Service Contract",
+    service: "Service",
     training: "Training",
     kso: "KSO",
     preventive_maintenance: "Preventive Maintenance",
@@ -343,6 +433,8 @@ export const usePdf = (user, currentDivisi = "IT") => {
     serviceTypeOptions,
     selectedItem,
     setSelectedItem,
+    isEditing,
+    editId,
 
     // Handlers
     handleInputChange,
@@ -355,6 +447,8 @@ export const usePdf = (user, currentDivisi = "IT") => {
     handleView,
     closeViewModal,
     handleGeneratePDF,
+    handleEdit,
+    cancelEdit,
     fetchHistory,
   };
 };
