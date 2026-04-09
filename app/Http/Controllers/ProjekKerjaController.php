@@ -2,232 +2,144 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\ProjekKerja;
 use App\Models\ProjekKerjaPhoto;
 use App\Models\ProjekKerjaFile;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class ProjekKerjaController extends Controller
 {
-    protected function isSuperAdmin(Request $request): bool
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
     {
-        return $request->user()?->role === 'super_admin';
-    }
+        $query = ProjekKerja::query();
 
-    protected function rejectIfLockedForAdmin(Request $request, ProjekKerja $projek)
-    {
-        if ($projek->is_lunas && ! $this->isSuperAdmin($request)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data sudah lunas, hanya superadmin yang bisa mengubah.',
-            ], 403);
+        // Filter by divisi if provided
+        // Juga tampilkan projek yang pernah lewat divisi ini (ada di divisi_flow)
+        if ($request->has('divisi') && $request->divisi) {
+            $divisiFilter = strtolower($request->divisi);
+            $query->where(function($q) use ($divisiFilter) {
+                $q->where('divisi', $divisiFilter)
+                  ->orWhere('divisi_flow', 'like', '%' . $divisiFilter . '%');
+            });
         }
 
-        return null;
+        $projek = $query->orderBy('id', 'desc')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $projek
+        ]);
     }
 
     /**
-     * @param  array<int, mixed>|null  $items
-     * @return array<int, array{nominal: float, keterangan: string}>
+     * Store a newly created resource in storage.
      */
-    protected function filterBiayaItems(?array $items): array
-    {
-        if ($items === null) {
-            return [];
-        }
-        $out = [];
-        foreach ($items as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-            $nom = isset($row['nominal']) ? (float) $row['nominal'] : 0;
-            $ket = isset($row['keterangan']) ? trim((string) $row['keterangan']) : '';
-            if ($nom < 0) {
-                $nom = 0;
-            }
-            if ($nom > 0 || $ket !== '') {
-                $out[] = ['nominal' => round($nom, 2), 'keterangan' => $ket];
-            }
-        }
-
-        return $out;
-    }
-
-    protected function biayaEditorLabel(Request $request): string
-    {
-        $u = $request->user();
-        if (! $u) {
-            return 'Tidak diketahui';
-        }
-        $name = trim((string) ($u->name ?? ''));
-        if ($name !== '') {
-            return $name;
-        }
-
-        return (string) ($u->email ?? 'User #'.$u->id);
-    }
-
-    /**
-     * @return array<string, array{by: string, at: string}>
-     */
-    protected function mergeBiayaEditMetaAfterCompare(
-        ProjekKerja $projek,
-        Request $request,
-        array $newJalan,
-        array $newPengeluaran,
-        array $newReimbursment
-    ): array {
-        $meta = $projek->biaya_edit_meta;
-        if (! is_array($meta)) {
-            $meta = [];
-        }
-        $label = $this->biayaEditorLabel($request);
-        $entry = [
-            'by' => $label,
-            'at' => now()->toIso8601String(),
-        ];
-
-        $oldJ = $projek->biaya_jalan_items ?? [];
-        $oldP = $projek->biaya_pengeluaran_items ?? [];
-        $oldR = $projek->biaya_reimbursment_items ?? [];
-
-        if (json_encode($oldJ) !== json_encode($newJalan)) {
-            $meta['jalan'] = $entry;
-        }
-        if (json_encode($oldP) !== json_encode($newPengeluaran)) {
-            $meta['pengeluaran'] = $entry;
-        }
-        if (json_encode($oldR) !== json_encode($newReimbursment)) {
-            $meta['reimbursment'] = $entry;
-        }
-
-        return $meta;
-    }
-
-    /* ======================================================
-       GET ALL
-    ====================================================== */
-    public function index()
-    {
-        $projek = ProjekKerja::with(['photos','files'])->latest()->get();
-        return response()->json($projek);
-    }
-
-    /* ======================================================
-       GET SINGLE
-    ====================================================== */
-    public function show($id)
-    {
-        $projek = ProjekKerja::with(['photos','files'])->findOrFail($id);
-        return response()->json($projek);
-    }
-
-    /* ======================================================
-       CREATE PROJECT + FILE + PHOTO
-    ====================================================== */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'divisi' => 'required|string',
             'jenis_pekerjaan' => 'required|string',
             'karyawan' => 'required|string',
             'alamat' => 'required|string',
-            'status' => 'required|in:Dibuat,Persiapan,Proses Pekerjaan,Editing,Invoicing,Selesai',
+            'status' => 'required|string',
             'start_date' => 'required|date',
             'problem_description' => 'nullable|string',
             'barang_dibeli' => 'nullable|string',
-            'biaya_jalan_items' => 'nullable|array',
-            'biaya_jalan_items.*.nominal' => 'required|numeric|min:0',
-            'biaya_jalan_items.*.keterangan' => 'nullable|string|max:2000',
-            'biaya_pengeluaran_items' => 'nullable|array',
-            'biaya_pengeluaran_items.*.nominal' => 'required|numeric|min:0',
-            'biaya_pengeluaran_items.*.keterangan' => 'nullable|string|max:2000',
-            'biaya_reimbursment_items' => 'nullable|array',
-            'biaya_reimbursment_items.*.nominal' => 'required|numeric|min:0',
-            'biaya_reimbursment_items.*.keterangan' => 'nullable|string|max:2000',
-            'file' => 'nullable|file|max:5120',
-            'files.*' => 'nullable|file|max:5120',
-            'photos.*' => 'nullable|image|max:2048'
+            'file' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:10240',
+            'photos' => 'nullable|array',
+            'photos.*' => 'image|mimes:jpeg,png,jpg,gif|max:10240',
+            'divisi_flow' => 'nullable|array',
+            'pic_karyawan' => 'nullable|string',
+            'karyawan_terlibat' => 'nullable|array',
         ]);
 
         DB::beginTransaction();
-
         try {
-            $today = date('dmY');
-            $lastId = ProjekKerja::max('id') ?? 0;
-            $newNumber = $lastId + 1;
-            $reportNo = "SR" . str_pad($newNumber, 3, "0", STR_PAD_LEFT) . "/HSR/" . $today;
+            // Generate report_no automatically - Format: SRXXX/HSR/YYMMDD
+            $lastProject = ProjekKerja::orderBy('id', 'desc')->first();
+            $lastId = $lastProject ? $lastProject->id : 0;
+            $newId = $lastId + 1;
+            $reportNo = 'SR' . str_pad($newId, 3, '0', STR_PAD_LEFT) . '/HSR/' . date('ymd');
 
-            $projek = ProjekKerja::create([
+            // created_by_divisi harus selalu divisi dari user yang membuat (authenticated user's divisi)
+            // Ini menunjukkan siapa yang AWAL membuat projek tersebut
+            $createdByDivisi = auth()->user()->divisi ?? 'Sales';
+
+            // Initialize divisi_flow berdasarkan user yang membuat dan divisi yang dipilih
+            // Flow dimulai dari user yang membuat, lalu divisi target
+            $divisiFlow = [strtolower($createdByDivisi)];
+            if (strtolower($validated['divisi']) !== strtolower($createdByDivisi)) {
+                $divisiFlow[] = strtolower($validated['divisi']);
+            }
+
+            // Parse karyawan (string dengan nama dipisahkan koma) menjadi array
+            // Gunakan ini untuk pic_karyawan dan karyawan_terlibat
+            $karyawanString = $validated['karyawan'] ?? '';
+            $karyawanArray = [];
+            if (!empty($karyawanString)) {
+                // Pisahkan string berdasarkan koma dan trim whitespace
+                $karyawanArray = array_map('trim', explode(',', $karyawanString));
+                // Hapus nilai kosong
+                $karyawanArray = array_filter($karyawanArray, function($val) {
+                    return !empty($val);
+                });
+                // Re-index array
+                $karyawanArray = array_values($karyawanArray);
+            }
+
+            // pic_karyawan adalah karyawan pertama dari array
+            $picKaryawan = !empty($karyawanArray) ? $karyawanArray[0] : null;
+
+            // karyawan_terlibat berisi semua karyawan yang dipilih
+            $karyawanTerlibat = $karyawanArray;
+
+            // Jika ada pic_karyawan atau karyawan_terlibat dari request, gunakan itu
+            $picKaryawan = $validated['pic_karyawan'] ?? $picKaryawan;
+            $karyawanTerlibat = $validated['karyawan_terlibat'] ?? $karyawanTerlibat;
+
+            $data = [
                 'report_no' => $reportNo,
-                'divisi' => $request->divisi,
-                'jenis_pekerjaan' => $request->jenis_pekerjaan,
-                'karyawan' => $request->karyawan,
-                'alamat' => $request->alamat,
-                'status' => $request->status,
-                'start_date' => Carbon::parse($request->start_date)->format('Y-m-d'),
-                'problem_description' => $request->problem_description,
-                'barang_dibeli' => $request->barang_dibeli,
-                'biaya_jalan_items' => $this->filterBiayaItems($request->input('biaya_jalan_items')),
-                'biaya_pengeluaran_items' => $this->filterBiayaItems($request->input('biaya_pengeluaran_items')),
-                'biaya_reimbursment_items' => $this->filterBiayaItems($request->input('biaya_reimbursment_items')),
-            ]);
-
-            $meta = [];
-            $label = $this->biayaEditorLabel($request);
-            $entry = [
-                'by' => $label,
-                'at' => now()->toIso8601String(),
+                'divisi' => $validated['divisi'],
+                'created_by_divisi' => $createdByDivisi,
+                'jenis_pekerjaan' => $validated['jenis_pekerjaan'],
+                'karyawan' => $karyawanString,
+                'alamat' => $validated['alamat'],
+                'status' => $validated['status'],
+                'start_date' => $validated['start_date'],
+                'problem_description' => $validated['problem_description'] ?? null,
+                'barang_dibeli' => $validated['barang_dibeli'] ?? null,
+                'divisi_flow' => $divisiFlow,
+                'pic_karyawan' => $picKaryawan,
+                'karyawan_terlibat' => $karyawanTerlibat,
+                'status_history' => [
+                    [
+                        'status' => $validated['status'],
+                        'updated_at' => now()->toDateTimeString(),
+                        'updated_by' => auth()->user()->name ?? 'System',
+                    ]
+                ],
             ];
-            $j = $projek->biaya_jalan_items ?? [];
-            $p = $projek->biaya_pengeluaran_items ?? [];
-            $r = $projek->biaya_reimbursment_items ?? [];
-            if (! empty($j)) {
-                $meta['jalan'] = $entry;
-            }
-            if (! empty($p)) {
-                $meta['pengeluaran'] = $entry;
-            }
-            if (! empty($r)) {
-                $meta['reimbursment'] = $entry;
-            }
-            if ($meta !== []) {
-                $projek->update(['biaya_edit_meta' => $meta]);
-            }
 
-            /* ================= FILE UPLOAD ================= */
+            $projek = ProjekKerja::create($data);
+
+            // Handle file upload
             if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $fileName = $file->getClientOriginalName();
-                $path = $file->storeAs('projek-files', $fileName, 'public');
-                ProjekKerjaFile::create([
-                    'projek_kerja_id' => $projek->id,
-                    'file' => $path
-                ]);
+                $path = $request->file('file')->store('projek-kerja-files', 'public');
+                $projek->update(['file_url' => asset('storage/' . $path)]);
             }
 
-            if ($request->hasFile('files')) {
-                foreach ($request->file('files') as $file) {
-                    $fileName = $file->getClientOriginalName();
-                    $path = $file->storeAs('projek-files', $fileName, 'public');
-                    ProjekKerjaFile::create([
-                        'projek_kerja_id' => $projek->id,
-                        'file' => $path
-                    ]);
-                }
-            }
-
-            /* ================= PHOTO UPLOAD ================= */
+            // Handle photo uploads
             if ($request->hasFile('photos')) {
                 foreach ($request->file('photos') as $photo) {
-                    $fileName = $photo->getClientOriginalName();
-                    $path = $photo->storeAs('projek-photos', $fileName, 'public');
+                    $photoPath = $photo->store('projek-kerja-photos', 'public');
                     ProjekKerjaPhoto::create([
                         'projek_kerja_id' => $projek->id,
-                        'photo' => $path
+                        'photo' => $photoPath,
                     ]);
                 }
             }
@@ -236,399 +148,675 @@ class ProjekKerjaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $projek->fresh(),
+                'message' => 'Projek kerja berhasil ditambahkan',
+                'data' => $projek->load(['photos', 'files'])
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'message' => 'Gagal menambahkan projek kerja: ' . $e->getMessage()
             ], 500);
         }
     }
 
-    /* ======================================================
-       UPDATE PROJECT (FULL)
-    ====================================================== */
+    /**
+     * Display the specified resource.
+     */
+    public function show($id)
+    {
+        $projek = ProjekKerja::with(['photos', 'files'])->find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $projek
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'divisi' => 'required|string',
-            'jenis_pekerjaan' => 'required|string',
-            'karyawan' => 'required|string',
-            'alamat' => 'required|string',
-            'status' => 'required|in:Dibuat,Persiapan,Proses Pekerjaan,Editing,Invoicing,Selesai',
-            'start_date' => 'required|date',
+        $projek = ProjekKerja::find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'divisi' => 'sometimes|required|string',
+            'jenis_pekerjaan' => 'sometimes|required|string',
+            'karyawan' => 'sometimes|required|string',
+            'alamat' => 'sometimes|required|string',
+            'status' => 'sometimes|required|string',
+            'start_date' => 'sometimes|required|date',
             'problem_description' => 'nullable|string',
             'barang_dibeli' => 'nullable|string',
-            'biaya_jalan_items' => 'nullable|array',
-            'biaya_jalan_items.*.nominal' => 'required|numeric|min:0',
-            'biaya_jalan_items.*.keterangan' => 'nullable|string|max:2000',
-            'biaya_pengeluaran_items' => 'nullable|array',
-            'biaya_pengeluaran_items.*.nominal' => 'required|numeric|min:0',
-            'biaya_pengeluaran_items.*.keterangan' => 'nullable|string|max:2000',
-            'biaya_reimbursment_items' => 'nullable|array',
-            'biaya_reimbursment_items.*.nominal' => 'required|numeric|min:0',
-            'biaya_reimbursment_items.*.keterangan' => 'nullable|string|max:2000',
+            'divisi_flow' => 'nullable|array',
+            'pic_karyawan' => 'nullable|string',
+            'karyawan_terlibat' => 'nullable|array',
         ]);
 
-        $projek = ProjekKerja::findOrFail($id);
+        DB::beginTransaction();
+        try {
+            $data = [];
+            $statusChanged = false;
+            $newStatus = null;
 
-        $data = [
-            'divisi' => $request->divisi,
-            'jenis_pekerjaan' => $request->jenis_pekerjaan,
-            'karyawan' => $request->karyawan,
-            'alamat' => $request->alamat,
-            'status' => $request->status,
-            'start_date' => Carbon::parse($request->start_date)->format('Y-m-d'),
-            'problem_description' => $request->problem_description,
-            'barang_dibeli' => $request->barang_dibeli,
-        ];
-        if ($request->has('biaya_jalan_items')) {
-            $data['biaya_jalan_items'] = $this->filterBiayaItems($request->input('biaya_jalan_items'));
-        }
-        if ($request->has('biaya_pengeluaran_items')) {
-            $data['biaya_pengeluaran_items'] = $this->filterBiayaItems($request->input('biaya_pengeluaran_items'));
-        }
-        if ($request->has('biaya_reimbursment_items')) {
-            $data['biaya_reimbursment_items'] = $this->filterBiayaItems($request->input('biaya_reimbursment_items'));
-        }
+            // Ambil divisi_flow yang ada sekarang
+            $existingDivisiFlow = $projek->divisi_flow ?? [];
 
-        $biayaTouched = isset($data['biaya_jalan_items']) || isset($data['biaya_pengeluaran_items']) || isset($data['biaya_reimbursment_items']);
-        if ($biayaTouched) {
-            $meta = is_array($projek->biaya_edit_meta) ? $projek->biaya_edit_meta : [];
-            $label = $this->biayaEditorLabel($request);
-            $entry = [
-                'by' => $label,
-                'at' => now()->toIso8601String(),
-            ];
-            if (isset($data['biaya_jalan_items'])) {
-                $old = $projek->biaya_jalan_items ?? [];
-                if (json_encode($old) !== json_encode($data['biaya_jalan_items'])) {
-                    $meta['jalan'] = $entry;
+            if (isset($validated['divisi'])) {
+                $data['divisi'] = $validated['divisi'];
+
+                // Update divisi_flow jika divisi berubah
+                if ($projek->divisi !== $validated['divisi']) {
+                    $flow = is_array($existingDivisiFlow) ? $existingDivisiFlow : json_decode($existingDivisiFlow, true) ?? [];
+
+                    // Helper function untuk case-insensitive check
+                    $inArrayCaseInsensitive = function($needle, $haystack) {
+                        foreach ($haystack as $item) {
+                            if (strtolower($item) === strtolower($needle)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+
+                    // Tambahkan divisi LAMA ke flow jika belum ada (case-insensitive)
+                    if (!$inArrayCaseInsensitive($projek->divisi, $flow)) {
+                        $flow[] = strtolower($projek->divisi);
+                    }
+
+                    // Tambahkan divisi BARU ke flow jika belum ada (case-insensitive)
+                    if (!$inArrayCaseInsensitive($validated['divisi'], $flow)) {
+                        $flow[] = strtolower($validated['divisi']);
+                    }
+
+                    $data['divisi_flow'] = $flow;
                 }
+
+                // created_by_divisi tetap tidak berubah (divisi awal pembuatan)
+                // Tidak set $data['created_by_divisi'] agar tetap dari database
             }
-            if (isset($data['biaya_pengeluaran_items'])) {
-                $old = $projek->biaya_pengeluaran_items ?? [];
-                if (json_encode($old) !== json_encode($data['biaya_pengeluaran_items'])) {
-                    $meta['pengeluaran'] = $entry;
+            if (isset($validated['jenis_pekerjaan'])) {
+                $data['jenis_pekerjaan'] = $validated['jenis_pekerjaan'];
+            }
+            if (isset($validated['alamat'])) {
+                $data['alamat'] = $validated['alamat'];
+            }
+            if (isset($validated['status'])) {
+                if ($projek->status !== $validated['status']) {
+                    $statusChanged = true;
+                    $newStatus = $validated['status'];
                 }
+                $data['status'] = $validated['status'];
             }
-            if (isset($data['biaya_reimbursment_items'])) {
-                $old = $projek->biaya_reimbursment_items ?? [];
-                if (json_encode($old) !== json_encode($data['biaya_reimbursment_items'])) {
-                    $meta['reimbursment'] = $entry;
+            if (isset($validated['start_date'])) {
+                $data['start_date'] = $validated['start_date'];
+            }
+            if (isset($validated['problem_description'])) {
+                $data['problem_description'] = $validated['problem_description'];
+            }
+            if (isset($validated['barang_dibeli'])) {
+                $data['barang_dibeli'] = $validated['barang_dibeli'];
+            }
+
+            // Parse karyawan (string dengan nama dipisahkan koma) menjadi array
+            // pic_karyawan adalah karyawan pertama, karyawan_terlibat berisi semua karyawan
+            if (isset($validated['karyawan'])) {
+                $karyawanString = $validated['karyawan'] ?? '';
+                $karyawanArray = [];
+                if (!empty($karyawanString)) {
+                    // Pisahkan string berdasarkan koma dan trim whitespace
+                    $karyawanArray = array_map('trim', explode(',', $karyawanString));
+                    // Hapus nilai kosong
+                    $karyawanArray = array_filter($karyawanArray, function($val) {
+                        return !empty($val);
+                    });
+                    // Re-index array
+                    $karyawanArray = array_values($karyawanArray);
                 }
+
+                // pic_karyawan adalah karyawan pertama dari array
+                $picKaryawan = !empty($karyawanArray) ? $karyawanArray[0] : null;
+                $karyawanTerlibat = $karyawanArray;
+
+                // Jika ada pic_karyawan atau karyawan_terlibat dari request, gunakan itu
+                $data['pic_karyawan'] = $validated['pic_karyawan'] ?? $picKaryawan;
+                $data['karyawan_terlibat'] = $karyawanTerlibat;
+            } elseif (isset($validated['pic_karyawan']) || isset($validated['karyawan_terlibat'])) {
+                // Jika ada explicit pic_karyawan atau karyawan_terlibat tanpa karyawan
+                $data['pic_karyawan'] = $validated['pic_karyawan'] ?? null;
+                $data['karyawan_terlibat'] = $validated['karyawan_terlibat'] ?? [];
             }
-            $data['biaya_edit_meta'] = $meta;
+
+            // Update status history if status changed
+            if ($statusChanged && $newStatus) {
+                $history = $projek->status_history ?? [];
+                $history[] = [
+                    'status' => $newStatus,
+                    'updated_at' => now()->toDateTimeString(),
+                    'updated_by' => auth()->user()->name ?? 'System',
+                ];
+                $data['status_history'] = $history;
+            }
+
+            $projek->update($data);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Projek kerja berhasil diupdate',
+                'data' => $projek->load(['photos', 'files'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal update projek kerja: ' . $e->getMessage()
+            ], 500);
         }
-
-        $projek->update($data);
-
-        return response()->json([
-            'success' => true,
-            'data' => $projek->fresh(),
-        ]);
     }
 
-    /* ======================================================
-       GET PHOTOS
-    ====================================================== */
-    public function getPhotos($id)
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy($id)
     {
-        $projek = ProjekKerja::with('photos')->find($id);
+        $projek = ProjekKerja::find($id);
+
         if (!$projek) {
-            return response()->json(['success' => false], 404);
-        }
-        $photos = [];
-        foreach ($projek->photos as $photo) {
-            $photos[] = [
-                'id' => $photo->id,
-                'url' => asset('storage/' . $photo->photo)
-            ];
-        }
-        return response()->json([
-            'success' => true,
-            'photos' => $photos
-        ]);
-    }
-
-    /* ======================================================
-       GET FILES
-    ====================================================== */
-    public function getFiles($id)
-    {
-        $projek = ProjekKerja::with('files')->find($id);
-        if (!$projek) {
-            return response()->json(['success' => false], 404);
-        }
-        $files = [];
-        foreach ($projek->files as $file) {
-            $files[] = [
-                'id' => $file->id,
-                'url' => asset('storage/' . $file->file)
-            ];
-        }
-        return response()->json([
-            'success' => true,
-            'files' => $files
-        ]);
-    }
-
-    /* ======================================================
-       ADD PHOTO
-    ====================================================== */
-    public function addPhoto(Request $request, $id)
-    {
-        $request->validate([
-            'photo' => 'required|image|max:2048'
-        ]);
-
-        $photo = $request->file('photo');
-        $fileName = $photo->getClientOriginalName();
-        $path = $photo->storeAs('projek-photos', $fileName, 'public');
-
-        $photoModel = ProjekKerjaPhoto::create([
-            'projek_kerja_id' => $id,
-            'photo' => $path
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'photo' => $photoModel
-        ]);
-    }
-
-    /* ======================================================
-       ADD FILE
-    ====================================================== */
-    public function addFile(Request $request, $id)
-    {
-        $request->validate([
-            'file' => 'required|file|max:5120'
-        ]);
-
-        $fileUpload = $request->file('file');
-        $fileName = $fileUpload->getClientOriginalName();
-        $path = $fileUpload->storeAs('projek-files', $fileName, 'public');
-
-        $fileModel = ProjekKerjaFile::create([
-            'projek_kerja_id' => $id,
-            'file' => $path
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'file' => $fileModel
-        ]);
-    }
-
-    /* ======================================================
-       DELETE PHOTO
-    ====================================================== */
-    public function deletePhoto($id)
-    {
-        $photo = ProjekKerjaPhoto::findOrFail($id);
-        if (Storage::disk('public')->exists($photo->photo)) {
-            Storage::disk('public')->delete($photo->photo);
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
         }
 
-        $photo->delete();
+        DB::beginTransaction();
+        try {
+            // Delete photos from storage
+            foreach ($projek->photos as $photo) {
+                if (Storage::disk('public')->exists($photo->photo)) {
+                    Storage::disk('public')->delete($photo->photo);
+                }
+                $photo->delete();
+            }
 
-        return response()->json(['success' => true]);
-    }
+            // Delete files from storage
+            foreach ($projek->files as $file) {
+                if (Storage::disk('public')->exists($file->file)) {
+                    Storage::disk('public')->delete($file->file);
+                }
+                $file->delete();
+            }
 
-    /* ======================================================
-       DELETE FILE
-    ====================================================== */
-    public function deleteFile($id)
-    {
-        $file = ProjekKerjaFile::findOrFail($id);
-        if (Storage::disk('public')->exists($file->file)) {
-            Storage::disk('public')->delete($file->file);
+            // Delete project
+            $projek->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Projek kerja berhasil dihapus'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus projek kerja: ' . $e->getMessage()
+            ], 500);
         }
-
-        $file->delete();
-
-        return response()->json(['success' => true]);
     }
 
-    /* ======================================================
-       UPDATE STATUS
-    ====================================================== */
+    /**
+     * Update status of a project
+     */
     public function updateStatus(Request $request, $id)
     {
-        $request->validate([
-            'status' => 'required|in:Dibuat,Persiapan,Proses Pekerjaan,Editing,Invoicing,Selesai'
+        $projek = ProjekKerja::find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|string'
         ]);
 
-        $projek = ProjekKerja::findOrFail($id);
-        $projek->update(['status' => $request->status]);
+        try {
+            $oldStatus = $projek->status;
 
-        return response()->json(['success' => true]);
+            // Update status history
+            $history = $projek->status_history ?? [];
+            $history[] = [
+                'status' => $validated['status'],
+                'updated_at' => now()->toDateTimeString(),
+                'updated_by' => auth()->user()->name ?? 'System',
+            ];
+
+            $projek->update([
+                'status' => $validated['status'],
+                'status_history' => $history
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Status berhasil diupdate',
+                'data' => $projek
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal update status: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
-    /* ======================================================
-       UPDATE DESCRIPTION
-    ====================================================== */
+    /**
+     * Update description of a project
+     */
     public function updateDescription(Request $request, $id)
     {
-        $request->validate([
+        $projek = ProjekKerja::find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
+        }
+
+        $validated = $request->validate([
             'problem_description' => 'nullable|string'
         ]);
 
-        $projek = ProjekKerja::findOrFail($id);
         $projek->update([
-            'problem_description' => $request->problem_description
+            'problem_description' => $validated['problem_description']
         ]);
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Deskripsi berhasil diupdate',
+            'data' => $projek
+        ]);
     }
 
-    /* ======================================================
-       UPDATE BIAYA (JALAN, PENGELUARAN, REIMBURSMENT)
-    ====================================================== */
+    /**
+     * Update biaya (uang) of a project
+     */
     public function updateUang(Request $request, $id)
     {
-        $request->validate([
-            'biaya_jalan_items' => 'required|array',
-            'biaya_jalan_items.*.nominal' => 'required|numeric|min:0',
-            'biaya_jalan_items.*.keterangan' => 'nullable|string|max:2000',
-            'biaya_pengeluaran_items' => 'required|array',
-            'biaya_pengeluaran_items.*.nominal' => 'required|numeric|min:0',
-            'biaya_pengeluaran_items.*.keterangan' => 'nullable|string|max:2000',
-            'biaya_reimbursment_items' => 'required|array',
-            'biaya_reimbursment_items.*.nominal' => 'required|numeric|min:0',
-            'biaya_reimbursment_items.*.keterangan' => 'nullable|string|max:2000',
-        ]);
+        $projek = ProjekKerja::find($id);
 
-        $projek = ProjekKerja::findOrFail($id);
-        if ($resp = $this->rejectIfLockedForAdmin($request, $projek)) {
-            return $resp;
-        }
-
-        $newJalan = $this->filterBiayaItems($request->input('biaya_jalan_items'));
-        $newPengeluaran = $this->filterBiayaItems($request->input('biaya_pengeluaran_items'));
-        $newReimbursment = $this->filterBiayaItems($request->input('biaya_reimbursment_items'));
-
-        $meta = $this->mergeBiayaEditMetaAfterCompare(
-            $projek,
-            $request,
-            $newJalan,
-            $newPengeluaran,
-            $newReimbursment
-        );
-
-        $projek->update([
-            'biaya_jalan_items' => $newJalan,
-            'biaya_pengeluaran_items' => $newPengeluaran,
-            'biaya_reimbursment_items' => $newReimbursment,
-            'biaya_edit_meta' => $meta,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'data' => $projek->fresh(),
-        ]);
-    }
-
-    /* ======================================================
-       EXPORT BIAYA → CSV (dibuka di Microsoft Excel)
-    ====================================================== */
-    public function exportBiayaCsv($id)
-    {
-        $projek = ProjekKerja::findOrFail($id);
-
-        $sections = [
-            'Biaya Jalan' => $projek->biaya_jalan_items ?? [],
-            'Biaya Pengeluaran' => $projek->biaya_pengeluaran_items ?? [],
-            'Biaya Reimbursment' => $projek->biaya_reimbursment_items ?? [],
-        ];
-
-        $filename = 'biaya-projek-'.preg_replace('/[^a-zA-Z0-9_-]/', '_', (string) $projek->report_no).'-'.$id.'.csv';
-
-        return response()->streamDownload(function () use ($sections, $projek) {
-            $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['Ringkasan Biaya Projek Kerja'], ';');
-            fputcsv($out, ['No. Laporan', $projek->report_no], ';');
-            fputcsv($out, ['Divisi', $projek->divisi], ';');
-            fputcsv($out, ['Jenis Pekerjaan', $projek->jenis_pekerjaan], ';');
-            fputcsv($out, ['Karyawan', $projek->karyawan], ';');
-            fputcsv($out, [], ';');
-
-            $grand = 0.0;
-            foreach ($sections as $title => $rows) {
-                fputcsv($out, [$title], ';');
-                fputcsv($out, ['No', 'Nominal (IDR)', 'Keterangan'], ';');
-                $sub = 0.0;
-                $no = 1;
-                foreach ($rows as $row) {
-                    $nom = isset($row['nominal']) ? (float) $row['nominal'] : 0;
-                    $ket = isset($row['keterangan']) ? (string) $row['keterangan'] : '';
-                    $sub += $nom;
-                    fputcsv($out, [$no, number_format($nom, 2, ',', ''), $ket], ';');
-                    $no++;
-                }
-                fputcsv($out, ['Subtotal '.$title, number_format($sub, 2, ',', ''), ''], ';');
-                $grand += $sub;
-                fputcsv($out, [], ';');
-            }
-            fputcsv($out, ['TOTAL KESELURUHAN (IDR)', number_format($grand, 2, ',', ''), ''], ';');
-            fclose($out);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
-    }
-
-    public function setLunas(Request $request, $id)
-    {
-        if (! $this->isSuperAdmin($request)) {
+        if (!$projek) {
             return response()->json([
                 'success' => false,
-                'message' => 'Hanya superadmin yang bisa mengubah status lunas.',
-            ], 403);
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
         }
 
-        $request->validate([
-            'is_lunas' => 'required|boolean',
+        $validated = $request->validate([
+            'biaya_jalan_items' => 'nullable|array',
+            'biaya_pengeluaran_items' => 'nullable|array',
+            'biaya_reimbursment_items' => 'nullable|array',
         ]);
 
-        $projek = ProjekKerja::findOrFail($id);
-        $isLunas = (bool) $request->boolean('is_lunas');
+        try {
+            $updateData = [];
+            $meta = [];
+            $userName = auth()->user()->name ?? 'System';
 
-        $projek->update([
-            'is_lunas' => $isLunas,
-            'lunas_at' => $isLunas ? now() : null,
-        ]);
+            if (isset($validated['biaya_jalan_items'])) {
+                $updateData['biaya_jalan_items'] = $validated['biaya_jalan_items'];
+                $meta['jalan'] = [
+                    'by' => $userName,
+                    'at' => now()->toDateTimeString(),
+                ];
+            }
+
+            if (isset($validated['biaya_pengeluaran_items'])) {
+                $updateData['biaya_pengeluaran_items'] = $validated['biaya_pengeluaran_items'];
+                $meta['pengeluaran'] = [
+                    'by' => $userName,
+                    'at' => now()->toDateTimeString(),
+                ];
+            }
+
+            if (isset($validated['biaya_reimbursment_items'])) {
+                $updateData['biaya_reimbursment_items'] = $validated['biaya_reimbursment_items'];
+                $meta['reimbursment'] = [
+                    'by' => $userName,
+                    'at' => now()->toDateTimeString(),
+                ];
+            }
+
+            if (!empty($meta)) {
+                $existingMeta = $projek->biaya_edit_meta ?? [];
+                $updateData['biaya_edit_meta'] = array_merge($existingMeta, $meta);
+            }
+
+            $projek->update($updateData);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Biaya berhasil diupdate',
+                'data' => $projek
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal update biaya: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Set project as paid (lunas)
+     */
+    public function setLunas(Request $request, $id)
+    {
+        $projek = ProjekKerja::find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
+        }
+
+        try {
+            $isLunas = filter_var($request->input('is_lunas', true), FILTER_VALIDATE_BOOLEAN);
+
+            $projek->update([
+                'is_lunas' => $isLunas,
+                'lunas_at' => $isLunas ? now() : null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $isLunas ? 'Project ditandai sebagai Lunas' : 'Status Lunas dibatalkan',
+                'data' => $projek
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal update status lunas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export biaya to CSV
+     */
+    public function exportBiayaCsv($id)
+    {
+        $projek = ProjekKerja::find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
+        }
+
+        $fileName = 'biaya_' . $projek->id . '_' . date('YmdHis') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ];
+
+        $callback = function() use ($projek) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Kategori', 'Nominal', 'Keterangan']);
+
+            // Biaya Jalan
+            if ($projek->biaya_jalan_items) {
+                foreach ($projek->biaya_jalan_items as $item) {
+                    fputcsv($file, [
+                        'Biaya Jalan',
+                        $item['nominal'] ?? 0,
+                        $item['keterangan'] ?? '',
+                    ]);
+                }
+            }
+
+            // Biaya Pengeluaran
+            if ($projek->biaya_pengeluaran_items) {
+                foreach ($projek->biaya_pengeluaran_items as $item) {
+                    fputcsv($file, [
+                        'Biaya Pengeluaran',
+                        $item['nominal'] ?? 0,
+                        $item['keterangan'] ?? '',
+                    ]);
+                }
+            }
+
+            // Biaya Reimbursment
+            if ($projek->biaya_reimbursment_items) {
+                foreach ($projek->biaya_reimbursment_items as $item) {
+                    fputcsv($file, [
+                        'Biaya Reimbursment',
+                        $item['nominal'] ?? 0,
+                        $item['keterangan'] ?? '',
+                    ]);
+                }
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Get photos of a project
+     */
+    public function getPhotos($id)
+    {
+        $projek = ProjekKerja::find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
+        }
 
         return response()->json([
             'success' => true,
-            'data' => $projek->fresh(),
+            'data' => $projek->photos
         ]);
     }
 
-    /* ======================================================
-       DELETE PROJECT
-    ====================================================== */
-    public function destroy($id)
+    /**
+     * Add photo to a project
+     */
+    public function addPhoto(Request $request, $id)
     {
-        $projek = ProjekKerja::with(['photos', 'files'])->findOrFail($id);
-        foreach ($projek->photos as $photo) {
+        $projek = ProjekKerja::find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:10240'
+        ]);
+
+        try {
+            $path = $request->file('photo')->store('projek-kerja-photos', 'public');
+
+            $photo = ProjekKerjaPhoto::create([
+                'projek_kerja_id' => $projek->id,
+                'photo' => $path,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Foto berhasil ditambahkan',
+                'data' => $photo
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan foto: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a photo
+     */
+    public function deletePhoto($id)
+    {
+        $photo = ProjekKerjaPhoto::find($id);
+
+        if (!$photo) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Foto tidak ditemukan'
+            ], 404);
+        }
+
+        try {
             if (Storage::disk('public')->exists($photo->photo)) {
                 Storage::disk('public')->delete($photo->photo);
             }
+
+            $photo->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Foto berhasil dihapus'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus foto: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get files of a project
+     */
+    public function getFiles($id)
+    {
+        $projek = ProjekKerja::find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
         }
 
-        foreach ($projek->files as $file) {
+        return response()->json([
+            'success' => true,
+            'data' => $projek->files
+        ]);
+    }
+
+    /**
+     * Add file to a project
+     */
+    public function addFile(Request $request, $id)
+    {
+        $projek = ProjekKerja::find($id);
+
+        if (!$projek) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projek kerja tidak ditemukan'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx|max:10240'
+        ]);
+
+        try {
+            $path = $request->file('file')->store('projek-kerja-files', 'public');
+
+            $file = ProjekKerjaFile::create([
+                'projek_kerja_id' => $projek->id,
+                'file' => $path,
+                'name' => $request->file('file')->getClientOriginalName(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'File berhasil ditambahkan',
+                'data' => $file
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a file
+     */
+    public function deleteFile($id)
+    {
+        $file = ProjekKerjaFile::find($id);
+
+        if (!$file) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File tidak ditemukan'
+            ], 404);
+        }
+
+        try {
             if (Storage::disk('public')->exists($file->file)) {
                 Storage::disk('public')->delete($file->file);
             }
+
+            $file->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'File berhasil dihapus'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus file: ' . $e->getMessage()
+            ], 500);
         }
-
-        $projek->delete();
-
-        return response()->json(['success' => true]);
     }
 }

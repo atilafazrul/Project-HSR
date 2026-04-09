@@ -32,6 +32,8 @@ import LogistikPage from "./LogistikPage";
 import PurchasingPage from "./PurchasingPage";
 import ProjekKerjaPage from "./ProjekKerjaPage";
 import FotoProjekPage from "./FotoProjekPage";
+import EditProjekKerjaPage from "./EditProjekKerjaPage";
+import KaryawanPage from "./KaryawanPage";
 import Profile from "./Profile";
 import FormPekerjaanPage from "./FormPekerjaanPage";
 import GeneratePDFPage from "./GeneratePDFPage";
@@ -527,6 +529,8 @@ export default function AdminDashboard({ user, logout }) {
               path="projek-kerja/foto/:id"
               element={<FotoProjekPage />}
             />
+            <Route path="projek-kerja/edit/:id" element={<EditProjekKerjaPage />} />
+            <Route path="karyawan" element={<KaryawanPage />} />
 
             {/* ================= INVENTORY ================= */}
             <Route path="it/inventory" element={<InventoryPage />} />
@@ -577,7 +581,8 @@ export default function AdminDashboard({ user, logout }) {
               element={<Profile user={currentUser} logout={logout} />}
             />
 
-            <Route path="*" element={<Navigate to="dashboard" replace />} />
+            {/* Fallback harus absolute biar tidak jadi /.../dashboard/dashboard */}
+            <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
           </Routes>
         </div>
       </main>

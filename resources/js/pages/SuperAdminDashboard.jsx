@@ -41,6 +41,7 @@ import LogistikPage from "./LogistikPage";
 import PurchasingPage from "./PurchasingPage";
 import ProjekKerjaPage from "./ProjekKerjaPage";
 import FotoProjekPage from "./FotoProjekPage";
+import EditProjekKerjaPage from "./EditProjekKerjaPage";
 import FormBarangPage from "./FormBarangPage";
 import EditBarangPage from "./EditBarangPage";
 import GeneratePDFPage from "./GeneratePDFPage";
@@ -204,13 +205,15 @@ export default function SuperAdminDashboard({ user, logout }) {
 
             <Route path="projek-kerja" element={<ProjekKerjaPage />} />
             <Route path="projek-kerja/foto/:id" element={<FotoProjekPage />} />
+            <Route path="projek-kerja/edit/:id" element={<EditProjekKerjaPage />} />
 
             <Route
               path="profile"
               element={<Profile user={user} logout={logout} />}
             />
 
-            <Route path="*" element={<Navigate to="dashboard" replace />} />
+            {/* Fallback harus absolute biar tidak jadi /.../dashboard/dashboard */}
+            <Route path="*" element={<Navigate to="/super_admin/dashboard" replace />} />
           </Routes>
         </div>
       </main>
@@ -245,18 +248,22 @@ const Dashboard = ({ user, windowWidth }) => {
 
   const loadData = async () => {
     try {
+      // Super Admin melihat semua data, Admin hanya melihat data divisi sendiri
       const res = await axios.get(
         `${import.meta.env.VITE_API_URL}/projek-kerja`
       );
 
       let data = res.data?.data || res.data || [];
 
+      // Admin hanya melihat data divisi sendiri
       if (user?.role !== "super_admin") {
         data = data.filter(p => p.divisi === user?.divisi);
       }
 
+      console.log("Dashboard loaded:", data.length, "projects");
       setProjek(data);
-    } catch {
+    } catch (err) {
+      console.error("Dashboard load error:", err);
       setProjek([]);
     } finally {
       setLoading(false);

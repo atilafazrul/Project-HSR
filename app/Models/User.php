@@ -89,4 +89,12 @@ class User extends Authenticatable
     {
         $this->attributes['no_telepon'] = $value;
     }
+
+    /**
+     * ================= RELATIONSHIPS =================
+     */
+    public function notifications()
+    {
+        return $this->hasMany(\App\Models\Notification::class);
+    }
 }

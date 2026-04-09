@@ -15,6 +15,7 @@ import {
   Building,
   Activity,
   Settings,
+  Edit3,
   ShoppingCart,
   Clock,
   DollarSign,
@@ -46,6 +47,37 @@ export default function ProjekKerjaPage() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user")));
   const role = user?.role;
   const divisiUser = user?.divisi;
+  const basePath = role === "super_admin" ? "/super_admin" : "/admin";
+  const canEditProjectByDivisi = (projectDivisi) =>
+    role === "super_admin" ||
+    String(projectDivisi || "")
+      .toLowerCase()
+      .trim() === String(divisiUser || "").toLowerCase().trim();
+
+  const divisiLabel = (d) => {
+    const key = String(d || "").toLowerCase().trim();
+    const map = {
+      sales: "Sales",
+      it: "IT",
+      service: "Service",
+      kontraktor: "Kontraktor",
+      logistik: "Logistik",
+      purchasing: "Purchasing",
+    };
+    return map[key] || d || "-";
+  };
+
+  const divisiKey = (d) => String(d || "").toLowerCase().trim();
+  const karyawanProjectList = (item) => {
+    const arr = [
+      item?.karyawan,
+      ...(Array.isArray(item?.karyawan_terlibat) ? item.karyawan_terlibat : []),
+      item?.pic_karyawan,
+    ]
+      .map((v) => String(v || "").trim())
+      .filter((v) => v !== "");
+    return Array.from(new Set(arr));
+  };
 
   const getCurrentDivisi = () => {
     const pathSegments = location.pathname.split('/');
@@ -79,7 +111,7 @@ export default function ProjekKerjaPage() {
   };
 
   const initialForm = {
-    divisi: getDefaultDivisi(),
+    divisi: "",
     jenis_pekerjaan: "",
     karyawan: "",
     alamat: "",
@@ -95,6 +127,11 @@ export default function ProjekKerjaPage() {
   const [dataList, setDataList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processingUpload, setProcessingUpload] = useState(false);
+  const [salesUsers, setSalesUsers] = useState([]);
+  const [salesUsersLoading, setSalesUsersLoading] = useState(false);
+  const [selectedSalesUsers, setSelectedSalesUsers] = useState([]);
+  const [salesUserError, setSalesUserError] = useState("");
+  const [karyawanInput, setKaryawanInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   // State untuk pagination
@@ -131,18 +168,61 @@ export default function ProjekKerjaPage() {
 
   useEffect(() => {
     fetchData();
+  }, [currentDivisi, divisiUser]);
+
+  useEffect(() => {
+    const fetchSalesUsers = async () => {
+      try {
+        setSalesUsersLoading(true);
+        const res = await api.get("/karyawan");
+        const users = res.data?.data || res.data || [];
+        const sales = users.filter(
+          (u) => String(u?.divisi || "").toLowerCase() === "sales"
+        );
+        setSalesUsers(sales);
+      } catch (err) {
+        console.error("Fetch sales users error:", err);
+      } finally {
+        setSalesUsersLoading(false);
+      }
+    };
+
+    fetchSalesUsers();
   }, []);
+
+  const salesDisplayName = (u) =>
+    (u?.name || u?.email || `#${u?.id || ""}`).trim();
 
   const fetchData = async () => {
     try {
-      const res = await api.get("/projek-kerja");
-      let data = res.data.data || res.data || [];
-      // Urutkan berdasarkan id terbaru (descending)
+      // Super Admin melihat semua data
+      // Admin hanya melihat data dari divisi user yang login
+      let params = '';
+      if (role !== "super_admin") {
+        const filterDivisi = divisiUser;
+        if (filterDivisi) {
+          params = `?divisi=${filterDivisi}`;
+        }
+      }
+
+      const res = await api.get(`/projek-kerja${params}`);
+      console.log("API Response raw:", res.data);
+      // Handle response dari API yang berformat {success: true, data: [...]}
+      // Ambil hanya property 'data' dari response
+      let data = res.data?.data;
+      console.log("Parsed data:", data);
+      // Pastikan data adalah array sebelum melakukan sort
+      if (!Array.isArray(data)) {
+        data = [];
+      }
+      console.log("Final data:", data);
       const sorted = data.sort((a, b) => b.id - a.id);
+      console.log("Sorted data:", sorted);
       setDataList(sorted);
-      setCurrentPage(1); // reset ke halaman pertama setelah ambil data baru
+      setCurrentPage(1);
     } catch (err) {
       console.error("Fetch error:", err);
+      setDataList([]);
     }
   };
 
@@ -151,6 +231,44 @@ export default function ProjekKerjaPage() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const handleKaryawanChange = (e) => {
+    const val = e.target.value;
+    setKaryawanInput(val);
+  };
+
+  const addSalesKaryawan = () => {
+    const val = karyawanInput.trim();
+    if (!val) return;
+
+    const match = salesUsers.find(
+      (u) => salesDisplayName(u).toLowerCase() === val.toLowerCase()
+    );
+
+    if (!match) {
+      setSalesUserError("Pilih nama karyawan dari daftar Sales");
+      return;
+    }
+
+    const exists = selectedSalesUsers.some(
+      (u) => salesDisplayName(u).toLowerCase() === val.toLowerCase()
+    );
+
+    if (exists) {
+      setSalesUserError("Karyawan ini sudah ditambahkan");
+      return;
+    }
+
+    setSelectedSalesUsers((prev) => [...prev, match]);
+    setKaryawanInput("");
+    setSalesUserError("");
+  };
+
+  const removeSalesKaryawan = (karyawanName) => {
+    setSelectedSalesUsers((prev) =>
+      prev.filter((u) => salesDisplayName(u).toLowerCase() !== karyawanName.toLowerCase())
+    );
   };
 
   const handleFileUpload = async (e) => {
@@ -185,13 +303,32 @@ export default function ProjekKerjaPage() {
       alert("Tidak ada akses");
       return;
     }
+
+    if (selectedSalesUsers.length === 0) {
+      alert("Pilih minimal 1 karyawan dari daftar akun Sales.");
+      return;
+    }
+
+    const needsDivisi = role === "super_admin" || divisiUser === "Sales";
+    if (needsDivisi && !form.divisi) {
+      alert("Pilih divisi project terlebih dahulu.");
+      return;
+    }
+
+    const karyawanNames = selectedSalesUsers.map(salesDisplayName).join(", ");
+
     setLoading(true);
     try {
       const formData = new FormData();
       Object.entries({
-        divisi: role === "admin" ? divisiUser : form.divisi,
+        divisi:
+          role === "super_admin"
+            ? form.divisi
+            : divisiUser === "Sales"
+              ? form.divisi
+              : divisiUser,
         jenis_pekerjaan: form.jenis_pekerjaan,
-        karyawan: form.karyawan,
+        karyawan: karyawanNames,
         alamat: form.alamat,
         status: form.status,
         start_date: form.start_date,
@@ -259,6 +396,10 @@ export default function ProjekKerjaPage() {
 
   const handleUpdateDesc = async () => {
     try {
+      if (!canEditCurrentProject) {
+        alert("Anda tidak punya akses untuk mengubah project ini.");
+        return;
+      }
       await api.patch(`/projek-kerja/${currentId}/deskripsi`, {
         problem_description: newDesc
       });
@@ -275,6 +416,10 @@ export default function ProjekKerjaPage() {
   const handleUpdateBarang = async () => {
     if (!currentId) return;
     try {
+      if (!canEditCurrentProject) {
+        alert("Anda tidak punya akses untuk mengubah project ini.");
+        return;
+      }
       const item = dataList.find(i => i.id === currentId);
       if (!item) return;
 
@@ -305,6 +450,10 @@ export default function ProjekKerjaPage() {
     setSelectedItem(item);
     setNewStatus(item.status);
     setShowTimelineModal(true);
+  };
+
+  const goToEditProjectPage = (item) => {
+    navigate(`${basePath}/projek-kerja/edit/${item.id}`);
   };
 
   const formatRupiah = (amount) => {
@@ -378,6 +527,10 @@ export default function ProjekKerjaPage() {
   const handleUpdateUang = async () => {
     if (!currentId) return;
     const item = dataList.find(i => i.id === currentId);
+    if (!canEditCurrentProject) {
+      alert("Anda tidak punya akses untuk mengubah project ini.");
+      return;
+    }
     if (item && role !== "super_admin" && item.is_lunas) {
       alert("Data sudah lunas, hanya superadmin yang bisa mengubah biaya.");
       return;
@@ -445,6 +598,10 @@ export default function ProjekKerjaPage() {
 
   const handleSaveStatus = async () => {
     if (!selectedItem) return;
+    if (!canEditTimelineProject) {
+      alert("Anda tidak punya akses untuk mengubah project ini.");
+      return;
+    }
     await handleStatusChange(selectedItem.id, newStatus);
     setShowTimelineModal(false);
   };
@@ -460,6 +617,56 @@ export default function ProjekKerjaPage() {
           <p className={`font-medium ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{label}</p>
           {date && <p className="text-xs text-gray-400">{date}</p>}
         </div>
+      </div>
+    );
+  };
+
+  const renderStatusHistoryTimeline = (item) => {
+    const history = item.status_history || [];
+    const statusOrder = ["Dibuat", "Persiapan", "Proses Pekerjaan", "Editing", "Invoicing", "Selesai"];
+
+    if (history.length === 0) {
+      return (
+        <div className="text-center py-4 text-gray-500 text-sm">
+          Belum ada riwayat status
+        </div>
+      );
+    }
+
+    return (
+      <div className="ml-2">
+        {history.map((entry, index) => {
+          const isLast = index === history.length - 1;
+          const isCurrentStatus = entry.status === item.status;
+          const dateStr = new Date(entry.updated_at).toLocaleString("id-ID", {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          return (
+            <div key={index} className="flex items-start gap-3 relative">
+              <div className="flex flex-col items-center">
+                <div className={`w-5 h-5 rounded-full border-2 ${isCurrentStatus ? 'bg-blue-600 border-blue-600' : 'bg-green-100 border-green-400'}`} />
+                {!isLast && <div className="w-0.5 h-10 bg-gray-300 my-1" />}
+              </div>
+              <div className="pb-4">
+                <p className={`font-medium ${isCurrentStatus ? 'text-blue-600' : 'text-gray-700'}`}>
+                  {entry.status}
+                  {isCurrentStatus && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Sedang berjalan</span>}
+                </p>
+                <p className="text-xs text-gray-400">{dateStr}</p>
+                {entry.updated_by && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Oleh: <span className="font-medium">{entry.updated_by}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -484,6 +691,10 @@ export default function ProjekKerjaPage() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
 
+  const currentProject = dataList.find((i) => i.id === currentId);
+  const canEditCurrentProject = canEditProjectByDivisi(currentProject?.divisi);
+  const canEditTimelineProject = canEditProjectByDivisi(selectedItem?.divisi);
+
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
@@ -492,7 +703,6 @@ export default function ProjekKerjaPage() {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
-  // Reset ke halaman pertama jika pencarian berubah
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
@@ -502,7 +712,7 @@ export default function ProjekKerjaPage() {
     <div className="space-y-12 p-4 lg:p-6 w-full max-w-full overflow-x-hidden">
 
       {/* ================= FORM ================= */}
-      {(role === "admin" || role === "super_admin") && (
+      {(role === "super_admin" || divisiUser === "Sales") && (
         <div className="bg-white rounded-3xl shadow-xl border p-4 sm:p-8 min-w-0 overflow-x-hidden">
           <div className="mb-8">
             <h2 className="text-3xl font-bold flex items-center gap-3">
@@ -529,22 +739,30 @@ export default function ProjekKerjaPage() {
                 </div>
               </div>
             )}
-            {role === "super_admin" ? (
-              <select
-                name="divisi"
-                value={form.divisi}
-                onChange={handleChange}
-                className="border p-3 rounded-xl focus:ring-2 focus:ring-blue-400"
-                required
-              >
-                <option value="">Pilih Divisi</option>
-                <option value="IT">IT</option>
-                <option value="Service">Service</option>
-                <option value="Kontraktor">Kontraktor</option>
-                <option value="Sales">Sales</option>
-                <option value="Logistik">Logistik</option>
-                <option value="Purchasing">Purchasing</option>
-              </select>
+            {role === "super_admin" || divisiUser === "Sales" ? (
+              selectedSalesUsers.length === 0 ? (
+                <input
+                  disabled
+                  value="Pilih karyawan Sales dulu"
+                  className="border p-3 rounded-xl bg-gray-100"
+                />
+              ) : (
+                <select
+                  name="divisi"
+                  value={form.divisi}
+                  onChange={handleChange}
+                  className="border p-3 rounded-xl focus:ring-2 focus:ring-blue-400"
+                  required
+                >
+                  <option value="">Pilih Divisi</option>
+                  <option value="IT">IT</option>
+                  <option value="Service">Service</option>
+                  <option value="Kontraktor">Kontraktor</option>
+                  <option value="Sales">Sales</option>
+                  <option value="Logistik">Logistik</option>
+                  <option value="Purchasing">Purchasing</option>
+                </select>
+              )
             ) : (
               <input value={divisiUser} disabled className="border p-3 rounded-xl bg-gray-100" />
             )}
@@ -561,15 +779,53 @@ export default function ProjekKerjaPage() {
               />
             </div>
 
-            <div className="relative">
-              <User className="absolute left-3 top-3 text-gray-400" size={18} />
-              <input
-                name="karyawan"
-                value={form.karyawan}
-                onChange={handleChange}
-                placeholder="Karyawan"
-                className="border pl-10 p-3 rounded-xl w-full"
-              />
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Karyawan (Sales)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  value={karyawanInput}
+                  onChange={handleKaryawanChange}
+                  list="sales-karyawan-list"
+                  placeholder={salesUsersLoading ? "Memuat karyawan..." : "Cari nama karyawan..."}
+                  className="border p-3 rounded-xl w-full"
+                  disabled={salesUsersLoading}
+                />
+                <button
+                  type="button"
+                  onClick={addSalesKaryawan}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 rounded-xl disabled:opacity-50"
+                  disabled={salesUsersLoading}
+                >
+                  Tambah
+                </button>
+              </div>
+              <datalist id="sales-karyawan-list">
+                {salesUsers.map((u) => (
+                  <option key={u.id} value={salesDisplayName(u)} />
+                ))}
+              </datalist>
+              {salesUserError ? (
+                <p className="text-[11px] text-red-600 mt-1">{salesUserError}</p>
+              ) : null}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {selectedSalesUsers.map((user, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-2 px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs border border-blue-200"
+                  >
+                    {salesDisplayName(user)}
+                    <button
+                      type="button"
+                      onClick={() => removeSalesKaryawan(salesDisplayName(user))}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
 
             <div className="relative">
@@ -682,7 +938,13 @@ export default function ProjekKerjaPage() {
 
             <button
               type="submit"
-              disabled={loading || processingUpload}
+              disabled={
+                loading ||
+                processingUpload ||
+                salesUsersLoading ||
+                selectedSalesUsers.length === 0 ||
+                ((role === "super_admin" || divisiUser === "Sales") && !form.divisi)
+              }
               className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-3 rounded-xl md:col-span-2 font-semibold shadow-lg transition disabled:opacity-60"
             >
               {loading ? "Menyimpan..." : "Simpan Projek"}
@@ -693,7 +955,7 @@ export default function ProjekKerjaPage() {
 
       {/* ================= TABLE ================= */}
       <div className="bg-white rounded-2xl shadow-md p-4 lg:p-8 border" style={{ maxWidth: '100%' }}>
-        {/* Header dengan judul dan search */}
+        {/* Header dengan judul, search, dan toggle auto-refresh */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Activity className="text-blue-600" />
@@ -744,7 +1006,6 @@ export default function ProjekKerjaPage() {
                 <th className="p-2 font-semibold" style={{ width: '90px' }}>
                   <FileText size={16} className="inline mr-1 text-gray-400" /> Deskripsi
                 </th>
-                {/* KOLOM BARANG DITAMBAHKAN */}
                 <th className="p-2 font-semibold" style={{ width: '100px' }}>
                   <ShoppingCart size={16} className="inline mr-1 text-gray-400" /> Barang
                 </th>
@@ -759,9 +1020,51 @@ export default function ProjekKerjaPage() {
             <tbody>
               {currentItems.map((item) => (
                 <tr key={item.id} className="border-b hover:bg-gray-50 transition">
-                  <td className="p-2 truncate">{item.divisi}</td>
+                  <td className="p-2">
+                    <select
+                      className="border rounded-lg px-2 py-1 text-xs bg-white w-full max-w-[120px]"
+                      value={divisiKey(item.divisi)}
+                      title="Divisi yang pernah terlibat (klik untuk lihat)"
+                      onChange={(e) => {
+                        e.target.value = divisiKey(item.divisi);
+                      }}
+                    >
+                      {Array.isArray(item.divisi_flow) && item.divisi_flow.length > 0 ? (
+                        item.divisi_flow.map((d, idx) => (
+                          <option key={`${d}-${idx}`} value={divisiKey(d)}>
+                            {divisiLabel(d)}
+                          </option>
+                        ))
+                      ) : (
+                        <option value={divisiKey(item.divisi)}>{divisiLabel(item.divisi)}</option>
+                      )}
+                    </select>
+                  </td>
                   <td className="p-2 font-medium truncate">{item.jenis_pekerjaan}</td>
-                  <td className="p-2 truncate">{item.karyawan}</td>
+                  <td className="p-2">
+                    {(() => {
+                      const karyawanList = karyawanProjectList(item);
+                      if (karyawanList.length <= 1) {
+                        return <span className="truncate block">{karyawanList[0] || "-"}</span>;
+                      }
+                      return (
+                        <select
+                          className="border rounded-lg px-2 py-1 text-xs bg-white w-full max-w-[140px]"
+                          value={karyawanList[0]}
+                          onChange={(e) => {
+                            e.target.value = karyawanList[0];
+                          }}
+                          title="Karyawan yang terlibat di project"
+                        >
+                          {karyawanList.map((nama, idx) => (
+                            <option key={`${nama}-${idx}`} value={nama}>
+                              {nama}
+                            </option>
+                          ))}
+                        </select>
+                      );
+                    })()}
+                  </td>
                   <td className="p-2 truncate">{item.alamat}</td>
                   <td className="p-2 whitespace-nowrap">{new Date(item.start_date).toLocaleDateString("id-ID")}</td>
                   <td className="p-2">
@@ -781,7 +1084,6 @@ export default function ProjekKerjaPage() {
                       </button>
                     ) : "-"}
                   </td>
-                  {/* KOLOM BARANG */}
                   <td className="p-2">
                     {item.barang_dibeli ? (
                       <button
@@ -800,9 +1102,13 @@ export default function ProjekKerjaPage() {
                     ) : "-"}
                   </td>
                   <td className="p-2">
-                    <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(item.status)} whitespace-nowrap inline-block max-w-full truncate`}>
+                    <button
+                      onClick={() => openTimelineModal(item)}
+                      className={`px-2 py-1 rounded-full text-xs border cursor-pointer hover:opacity-80 transition ${getStatusColor(item.status)} whitespace-nowrap inline-block max-w-full truncate`}
+                      title="Klik untuk lihat timeline"
+                    >
                       {item.status}
-                    </span>
+                    </button>
                   </td>
                   <td className="p-2">
                     <div className="flex justify-center gap-1">
@@ -814,20 +1120,24 @@ export default function ProjekKerjaPage() {
                       <button onClick={() => handleViewPhoto(item.id)} className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg" title="Lihat Foto">
                         <FileText size={14} />
                       </button>
-                      <button
-                        onClick={() => openTimelineModal(item)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white p-1.5 rounded-lg"
-                        title="Ubah Status"
-                      >
-                        <Clock size={14} />
-                      </button>
-                      <button
-                        onClick={() => openUangModal(item)}
-                        className="bg-amber-600 hover:bg-amber-700 text-white p-1.5 rounded-lg"
-                        title="Biaya jalan, pengeluaran & reimbursment"
-                      >
-                        <DollarSign size={14} />
-                      </button>
+                      {(role === "super_admin" || String(item.divisi || "").toLowerCase().trim() === String(divisiUser || "").toLowerCase().trim()) && (
+                        <>
+                          <button
+                            onClick={() => goToEditProjectPage(item)}
+                            className="bg-purple-600 hover:bg-purple-700 text-white p-1.5 rounded-lg"
+                            title="Edit project & oper divisi"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            onClick={() => openUangModal(item)}
+                            className="bg-amber-600 hover:bg-amber-700 text-white p-1.5 rounded-lg"
+                            title="Biaya jalan, pengeluaran & reimbursment"
+                          >
+                            <DollarSign size={14} />
+                          </button>
+                        </>
+                      )}
                       {(role === "super_admin" || item.divisi === divisiUser) && (
                         <button
                           onClick={() => handleDelete(item.id)}
@@ -883,7 +1193,14 @@ export default function ProjekKerjaPage() {
               <>
                 <p className="text-gray-700 whitespace-pre-line">{descText || "-"}</p>
                 <div className="flex justify-end gap-3 mt-6">
-                  <button onClick={() => setEditDesc(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Edit</button>
+                  <button
+                    onClick={() => setEditDesc(true)}
+                    disabled={!canEditCurrentProject}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={!canEditCurrentProject ? "Tidak ada akses" : undefined}
+                  >
+                    Edit
+                  </button>
                   <button onClick={() => setShowDesc(false)} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg">Tutup</button>
                 </div>
               </>
@@ -891,7 +1208,13 @@ export default function ProjekKerjaPage() {
               <>
                 <textarea value={newDesc} onChange={(e) => setNewDesc(e.target.value)} className="border w-full p-3 rounded-xl h-32" />
                 <div className="flex justify-end gap-3 mt-6">
-                  <button onClick={handleUpdateDesc} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">Simpan</button>
+                  <button
+                    onClick={handleUpdateDesc}
+                    disabled={!canEditCurrentProject}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Simpan
+                  </button>
                   <button onClick={() => setEditDesc(false)} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg">Batal</button>
                 </div>
               </>
@@ -917,6 +1240,7 @@ export default function ProjekKerjaPage() {
                       setNewBarang(barangText);
                       setEditBarang(true);
                     }}
+                    disabled={!canEditCurrentProject}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                   >
                     Edit
@@ -940,6 +1264,7 @@ export default function ProjekKerjaPage() {
                 <div className="flex justify-end gap-3 mt-6">
                   <button
                     onClick={handleUpdateBarang}
+                    disabled={!canEditCurrentProject}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
                   >
                     Simpan
@@ -963,68 +1288,16 @@ export default function ProjekKerjaPage() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Clock className="text-blue-600" />
-              Timeline Pekerjaan
+              Timeline Status
             </h3>
-            <div className="mb-6">
-              <div className="ml-2">
-                {renderTimelineStep("Dibuat", true, new Date(selectedItem.start_date).toLocaleString("id-ID"), false)}
-                {renderTimelineStep(
-                  "Persiapan",
-                  ["Persiapan", "Proses Pekerjaan", "Editing", "Invoicing", "Selesai"].includes(selectedItem.status),
-                  selectedItem.status === "Persiapan" ? "Sedang berjalan" : null,
-                  false
-                )}
-                {renderTimelineStep(
-                  "Proses Pekerjaan",
-                  ["Proses Pekerjaan", "Editing", "Invoicing", "Selesai"].includes(selectedItem.status),
-                  selectedItem.status === "Proses Pekerjaan" ? "Sedang berjalan" : null,
-                  false
-                )}
-                {renderTimelineStep(
-                  "Editing",
-                  ["Editing", "Invoicing", "Selesai"].includes(selectedItem.status),
-                  selectedItem.status === "Editing" ? "Sedang berjalan" : null,
-                  false
-                )}
-                {renderTimelineStep(
-                  "Invoicing",
-                  ["Invoicing", "Selesai"].includes(selectedItem.status),
-                  selectedItem.status === "Invoicing" ? "Sedang berjalan" : null,
-                  false
-                )}
-                {renderTimelineStep(
-                  "Selesai",
-                  selectedItem.status === "Selesai",
-                  selectedItem.status === "Selesai" ? new Date().toLocaleString("id-ID") : null,
-                  true
-                )}
-              </div>
+            <div className="bg-gray-50 rounded-xl p-4 mb-6">
+              {renderStatusHistoryTimeline(selectedItem)}
             </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ubah Status</label>
-              <select
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                className="border p-2 rounded-lg w-full"
-              >
-                <option value="Dibuat">Dibuat</option>
-                <option value="Persiapan">Persiapan</option>
-                <option value="Proses Pekerjaan">Proses Pekerjaan</option>
-                <option value="Editing">Editing</option>
-                <option value="Invoicing">Invoicing</option>
-                <option value="Selesai">Selesai</option>
-              </select>
+            <div className="text-xs text-gray-500 text-center mb-4">
+              Untuk mengubah status, silakan edit pekerjaan di halaman Edit
             </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={handleSaveStatus}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-              >
-                Simpan Perubahan
-              </button>
-              <button onClick={() => setShowTimelineModal(false)} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded-lg">
+            <div className="flex justify-end">
+              <button onClick={() => setShowTimelineModal(false)} className="bg-gray-300 hover:bg-gray-400 px-6 py-2 rounded-lg">
                 Tutup
               </button>
             </div>
@@ -1032,7 +1305,7 @@ export default function ProjekKerjaPage() {
         </div>
       )}
 
-      {/* ================= MODAL BIAYA (JALAN / PENGELUARAN / REIMBURSMENT) ================= */}
+      {/* ================= MODAL BIAYA ================= */}
       {showUangModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-6 relative my-8 max-h-[92vh] overflow-y-auto">
@@ -1065,27 +1338,27 @@ export default function ProjekKerjaPage() {
                     const rowItem = dataList.find((i) => i.id === currentId);
                     const meta = rowItem?.biaya_edit_meta?.[col.key];
                     return (
-                    <div key={col.key} className="border rounded-xl p-3 bg-gray-50/80">
-                      <p className="font-semibold text-gray-800 mb-2">{col.label}</p>
-                      {shown.length === 0 ? (
-                        <p className="text-xs text-gray-400">Belum ada entri</p>
-                      ) : (
-                        <ul className="space-y-1 text-gray-700 max-h-40 overflow-y-auto">
-                          {shown.map((r, i) => (
-                            <li key={i} className="text-xs border-b border-gray-200/80 pb-1">
-                              <span className="font-medium">{formatRupiah(r.nominal || 0)}</span>
-                              {r.keterangan ? (
-                                <span className="block text-gray-600 mt-0.5">{r.keterangan}</span>
-                              ) : null}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <p className="mt-2 pt-2 border-t text-amber-800 font-semibold">
-                        Subtotal: {formatRupiah(sumBiayaRows(col.rows))}
-                      </p>
-                      <BiayaMetaFooter meta={meta} />
-                    </div>
+                      <div key={col.key} className="border rounded-xl p-3 bg-gray-50/80">
+                        <p className="font-semibold text-gray-800 mb-2">{col.label}</p>
+                        {shown.length === 0 ? (
+                          <p className="text-xs text-gray-400">Belum ada entri</p>
+                        ) : (
+                          <ul className="space-y-1 text-gray-700 max-h-40 overflow-y-auto">
+                            {shown.map((r, i) => (
+                              <li key={i} className="text-xs border-b border-gray-200/80 pb-1">
+                                <span className="font-medium">{formatRupiah(r.nominal || 0)}</span>
+                                {r.keterangan ? (
+                                  <span className="block text-gray-600 mt-0.5">{r.keterangan}</span>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <p className="mt-2 pt-2 border-t text-amber-800 font-semibold">
+                          Subtotal: {formatRupiah(sumBiayaRows(col.rows))}
+                        </p>
+                        <BiayaMetaFooter meta={meta} />
+                      </div>
                     );
                   })}
                 </div>
@@ -1125,11 +1398,16 @@ export default function ProjekKerjaPage() {
                     onClick={() => setEditUang(true)}
                     disabled={(() => {
                       const item = dataList.find(i => i.id === currentId);
-                      return role !== "super_admin" && item?.is_lunas;
+                      return (
+                        !canEditCurrentProject ||
+                        (role !== "super_admin" && item?.is_lunas)
+                      );
                     })()}
                     className={`px-4 py-2 rounded-lg text-white ${(() => {
                       const item = dataList.find(i => i.id === currentId);
-                      const locked = role !== "super_admin" && item?.is_lunas;
+                      const locked =
+                        !canEditCurrentProject ||
+                        (role !== "super_admin" && item?.is_lunas);
                       return locked ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700";
                     })()}`}
                   >
@@ -1155,55 +1433,55 @@ export default function ProjekKerjaPage() {
                     const editItem = dataList.find((i) => i.id === currentId);
                     const meta = editItem?.biaya_edit_meta?.[col.key];
                     return (
-                    <div key={col.key} className={`rounded-xl border p-3 ${col.color}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-sm text-gray-800">{col.label}</span>
-                        <button
-                          type="button"
-                          onClick={() => addBiayaRow(col.key)}
-                          className="p-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-100 text-emerald-700"
-                          title="Tambah baris"
-                        >
-                          <Plus size={18} />
-                        </button>
-                      </div>
-                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                        {biayaEdit[col.key].map((row, idx) => (
-                          <div key={idx} className="bg-white rounded-lg border p-2 space-y-2">
-                            <div className="flex gap-2">
+                      <div key={col.key} className={`rounded-xl border p-3 ${col.color}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-sm text-gray-800">{col.label}</span>
+                          <button
+                            type="button"
+                            onClick={() => addBiayaRow(col.key)}
+                            className="p-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-100 text-emerald-700"
+                            title="Tambah baris"
+                          >
+                            <Plus size={18} />
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                          {biayaEdit[col.key].map((row, idx) => (
+                            <div key={idx} className="bg-white rounded-lg border p-2 space-y-2">
+                              <div className="flex gap-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={row.nominal}
+                                  onChange={(e) => updateBiayaCell(col.key, idx, "nominal", e.target.value)}
+                                  className="border w-full p-2 rounded-lg text-sm"
+                                  placeholder="Nominal"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeBiayaRow(col.key, idx)}
+                                  className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 shrink-0"
+                                  title="Hapus baris"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                               <input
-                                type="number"
-                                min="0"
-                                step="any"
-                                value={row.nominal}
-                                onChange={(e) => updateBiayaCell(col.key, idx, "nominal", e.target.value)}
+                                type="text"
+                                value={row.keterangan}
+                                onChange={(e) => updateBiayaCell(col.key, idx, "keterangan", e.target.value)}
                                 className="border w-full p-2 rounded-lg text-sm"
-                                placeholder="Nominal"
+                                placeholder="Keterangan"
                               />
-                              <button
-                                type="button"
-                                onClick={() => removeBiayaRow(col.key, idx)}
-                                className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 shrink-0"
-                                title="Hapus baris"
-                              >
-                                <Trash2 size={16} />
-                              </button>
                             </div>
-                            <input
-                              type="text"
-                              value={row.keterangan}
-                              onChange={(e) => updateBiayaCell(col.key, idx, "keterangan", e.target.value)}
-                              className="border w-full p-2 rounded-lg text-sm"
-                              placeholder="Keterangan"
-                            />
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                        <p className="mt-2 text-sm font-semibold text-gray-800">
+                          Subtotal: {formatRupiah(sumBiayaRows(biayaEdit[col.key]))}
+                        </p>
+                        <BiayaMetaFooter meta={meta} />
                       </div>
-                      <p className="mt-2 text-sm font-semibold text-gray-800">
-                        Subtotal: {formatRupiah(sumBiayaRows(biayaEdit[col.key]))}
-                      </p>
-                      <BiayaMetaFooter meta={meta} />
-                    </div>
                     );
                   })}
                 </div>
@@ -1221,7 +1499,8 @@ export default function ProjekKerjaPage() {
                   <button
                     type="button"
                     onClick={handleUpdateUang}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                    disabled={!canEditCurrentProject}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Simpan
                   </button>

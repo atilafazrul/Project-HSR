@@ -30,9 +30,18 @@ export default function Login({ login, isLoading }) {
 
 
   /* ================= LOGIN ================= */
+  // Cek flag untuk mencegah infinite redirect loop
+  const REDIRECTED_TO_LOGIN = 'redirected_to_login';
+
   const handleLogin = async (e) => {
 
     e.preventDefault();
+
+    // Cek flag infinite redirect loop
+    if (localStorage.getItem(REDIRECTED_TO_LOGIN)) {
+      alert("Terlalu banyak redirect. Silakan coba lagi.");
+      return;
+    }
 
     if (isLoading) return;
 
