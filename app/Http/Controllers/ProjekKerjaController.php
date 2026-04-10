@@ -477,17 +477,61 @@ class ProjekKerjaController extends Controller
 
         $validated = $request->validate([
             'biaya_jalan_items' => 'nullable|array',
+            'biaya_jalan_items.*.nominal' => 'nullable|numeric|min:0',
+            'biaya_jalan_items.*.keterangan' => 'nullable|string',
+            'biaya_jalan_items.*.is_lunas' => 'nullable|boolean',
             'biaya_pengeluaran_items' => 'nullable|array',
+            'biaya_pengeluaran_items.*.nominal' => 'nullable|numeric|min:0',
+            'biaya_pengeluaran_items.*.keterangan' => 'nullable|string',
+            'biaya_pengeluaran_items.*.is_lunas' => 'nullable|boolean',
             'biaya_reimbursment_items' => 'nullable|array',
+            'biaya_reimbursment_items.*.nominal' => 'nullable|numeric|min:0',
+            'biaya_reimbursment_items.*.keterangan' => 'nullable|string',
+            'biaya_reimbursment_items.*.is_lunas' => 'nullable|boolean',
         ]);
 
         try {
             $updateData = [];
             $meta = [];
             $userName = auth()->user()->name ?? 'System';
+            $isSuperAdmin = (auth()->user()->role ?? null) === 'super_admin';
+
+            $normalizeItems = function (?array $incoming, array $existing = []) use ($isSuperAdmin) {
+                $incoming = $incoming ?? [];
+                $result = [];
+                foreach ($incoming as $idx => $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+
+                    $nominal = (float) ($row['nominal'] ?? 0);
+                    if ($nominal < 0) {
+                        $nominal = 0;
+                    }
+                    $keterangan = trim((string) ($row['keterangan'] ?? ''));
+
+                    $existingIsLunas = (bool) ($existing[$idx]['is_lunas'] ?? false);
+                    $isLunas = $isSuperAdmin
+                        ? (bool) ($row['is_lunas'] ?? false)
+                        : $existingIsLunas;
+
+                    if ($nominal > 0 || $keterangan !== '') {
+                        $result[] = [
+                            'nominal' => round($nominal, 2),
+                            'keterangan' => $keterangan,
+                            'is_lunas' => $isLunas,
+                        ];
+                    }
+                }
+
+                return $result;
+            };
 
             if (isset($validated['biaya_jalan_items'])) {
-                $updateData['biaya_jalan_items'] = $validated['biaya_jalan_items'];
+                $updateData['biaya_jalan_items'] = $normalizeItems(
+                    $validated['biaya_jalan_items'],
+                    $projek->biaya_jalan_items ?? []
+                );
                 $meta['jalan'] = [
                     'by' => $userName,
                     'at' => now()->toDateTimeString(),
@@ -495,7 +539,10 @@ class ProjekKerjaController extends Controller
             }
 
             if (isset($validated['biaya_pengeluaran_items'])) {
-                $updateData['biaya_pengeluaran_items'] = $validated['biaya_pengeluaran_items'];
+                $updateData['biaya_pengeluaran_items'] = $normalizeItems(
+                    $validated['biaya_pengeluaran_items'],
+                    $projek->biaya_pengeluaran_items ?? []
+                );
                 $meta['pengeluaran'] = [
                     'by' => $userName,
                     'at' => now()->toDateTimeString(),
@@ -503,7 +550,10 @@ class ProjekKerjaController extends Controller
             }
 
             if (isset($validated['biaya_reimbursment_items'])) {
-                $updateData['biaya_reimbursment_items'] = $validated['biaya_reimbursment_items'];
+                $updateData['biaya_reimbursment_items'] = $normalizeItems(
+                    $validated['biaya_reimbursment_items'],
+                    $projek->biaya_reimbursment_items ?? []
+                );
                 $meta['reimbursment'] = [
                     'by' => $userName,
                     'at' => now()->toDateTimeString(),
@@ -536,6 +586,13 @@ class ProjekKerjaController extends Controller
      */
     public function setLunas(Request $request, $id)
     {
+        if ((auth()->user()->role ?? null) !== 'super_admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya superadmin yang bisa mengubah status lunas',
+            ], 403);
+        }
+
         $projek = ProjekKerja::find($id);
 
         if (!$projek) {
@@ -590,7 +647,7 @@ class ProjekKerjaController extends Controller
 
         $callback = function() use ($projek) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Kategori', 'Nominal', 'Keterangan']);
+            fputcsv($file, ['Kategori', 'Nominal', 'Keterangan', 'Lunas Item']);
 
             // Biaya Jalan
             if ($projek->biaya_jalan_items) {
@@ -599,6 +656,7 @@ class ProjekKerjaController extends Controller
                         'Biaya Jalan',
                         $item['nominal'] ?? 0,
                         $item['keterangan'] ?? '',
+                        !empty($item['is_lunas']) ? 'Ya' : 'Tidak',
                     ]);
                 }
             }
@@ -610,6 +668,7 @@ class ProjekKerjaController extends Controller
                         'Biaya Pengeluaran',
                         $item['nominal'] ?? 0,
                         $item['keterangan'] ?? '',
+                        !empty($item['is_lunas']) ? 'Ya' : 'Tidak',
                     ]);
                 }
             }
@@ -621,6 +680,7 @@ class ProjekKerjaController extends Controller
                         'Biaya Reimbursment',
                         $item['nominal'] ?? 0,
                         $item['keterangan'] ?? '',
+                        !empty($item['is_lunas']) ? 'Ya' : 'Tidak',
                     ]);
                 }
             }

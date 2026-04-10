@@ -159,7 +159,7 @@ export default function ProjekKerjaPage() {
   // Modal biaya (jalan, pengeluaran, reimbursment) — banyak baris per kategori
   const [showUangModal, setShowUangModal] = useState(false);
   const [editUang, setEditUang] = useState(false);
-  const emptyBiayaRow = () => ({ nominal: "", keterangan: "" });
+  const emptyBiayaRow = () => ({ nominal: "", keterangan: "", is_lunas: false });
   const [biayaEdit, setBiayaEdit] = useState({
     jalan: [emptyBiayaRow()],
     pengeluaran: [emptyBiayaRow()],
@@ -470,6 +470,7 @@ export default function ProjekKerjaPage() {
     return arr.map((r) => ({
       nominal: r.nominal != null && r.nominal !== "" ? String(r.nominal) : "",
       keterangan: r.keterangan ?? "",
+      is_lunas: Boolean(r.is_lunas),
     }));
   };
 
@@ -487,6 +488,7 @@ export default function ProjekKerjaPage() {
     rows.map((r) => ({
       nominal: Number.isFinite(Number(r.nominal)) ? Number(r.nominal) : 0,
       keterangan: (r.keterangan || "").trim(),
+      is_lunas: Boolean(r.is_lunas),
     }));
 
   const openUangModal = (item) => {
@@ -592,6 +594,50 @@ export default function ProjekKerjaPage() {
       }
     } catch (err) {
       const msg = err.response?.data?.message || "Gagal update status lunas";
+      alert(msg);
+    }
+  };
+
+  const handleToggleItemLunas = async (kategoriKey, index) => {
+    if (role !== "super_admin" || !currentId) return;
+    const item = dataList.find((i) => i.id === currentId);
+    if (!item) return;
+
+    const toRows = (rows) =>
+      (Array.isArray(rows) ? rows : []).map((r) => ({
+        nominal: Number.isFinite(Number(r?.nominal)) ? Number(r.nominal) : 0,
+        keterangan: String(r?.keterangan || ""),
+        is_lunas: Boolean(r?.is_lunas),
+      }));
+
+    const payload = {
+      biaya_jalan_items: toRows(item.biaya_jalan_items),
+      biaya_pengeluaran_items: toRows(item.biaya_pengeluaran_items),
+      biaya_reimbursment_items: toRows(item.biaya_reimbursment_items),
+    };
+
+    const mapKey = {
+      jalan: "biaya_jalan_items",
+      pengeluaran: "biaya_pengeluaran_items",
+      reimbursment: "biaya_reimbursment_items",
+    };
+    const field = mapKey[kategoriKey];
+    if (!field || !payload[field]?.[index]) return;
+
+    payload[field][index].is_lunas = !payload[field][index].is_lunas;
+    const nextValue = payload[field][index].is_lunas;
+    setBiayaEdit((prev) => ({
+      ...prev,
+      [kategoriKey]: (prev[kategoriKey] || []).map((r, i) =>
+        i === index ? { ...r, is_lunas: nextValue } : r
+      ),
+    }));
+
+    try {
+      await api.patch(`/projek-kerja/${currentId}/uang`, payload);
+      fetchData();
+    } catch (err) {
+      const msg = err.response?.data?.message || "Gagal update lunas per item";
       alert(msg);
     }
   };
@@ -1114,7 +1160,7 @@ export default function ProjekKerjaPage() {
                           <Download size={14} />
                         </a>
                       )}
-                      <button onClick={() => handleViewPhoto(item.id)} className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg" title="Lihat Foto">
+                      <button onClick={() => handleViewPhoto(item.id)} className="bg-gray-500 hover:bg-gray-600 text-white p-1.5 rounded-lg" title="Lihat Foto">
                         <FileText size={14} />
                       </button>
                       {(role === "super_admin" || String(item.divisi || "").toLowerCase().trim() === String(divisiUser || "").toLowerCase().trim()) && (
@@ -1128,8 +1174,8 @@ export default function ProjekKerjaPage() {
                           </button>
                           <button
                             onClick={() => openUangModal(item)}
-                            className="bg-amber-600 hover:bg-amber-700 text-white p-1.5 rounded-lg"
-                            title="Biaya jalan, pengeluaran & reimbursment"
+                            className={`text-white p-1.5 rounded-lg ${item.is_lunas ? "bg-green-600 hover:bg-green-700" : "bg-yellow-500 hover:bg-yellow-600"}`}
+                            title={item.is_lunas ? "Biaya (Lunas)" : "Biaya (Belum Lunas)"}
                           >
                             <DollarSign size={14} />
                           </button>
@@ -1331,7 +1377,9 @@ export default function ProjekKerjaPage() {
                     { key: "pengeluaran", label: "Biaya Pengeluaran", rows: biayaEdit.pengeluaran },
                     { key: "reimbursment", label: "Biaya Reimbursment", rows: biayaEdit.reimbursment },
                   ].map((col) => {
-                    const shown = displayBiayaRows(col.rows);
+                    const shown = displayBiayaRows(
+                      col.rows.map((r, idx) => ({ ...r, __idx: idx }))
+                    );
                     const rowItem = dataList.find((i) => i.id === currentId);
                     const meta = rowItem?.biaya_edit_meta?.[col.key];
                     return (
@@ -1344,6 +1392,20 @@ export default function ProjekKerjaPage() {
                             {shown.map((r, i) => (
                               <li key={i} className="text-xs border-b border-gray-200/80 pb-1">
                                 <span className="font-medium">{formatRupiah(r.nominal || 0)}</span>
+                                {role === "super_admin" ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleItemLunas(col.key, r.__idx)}
+                                    className={`ml-2 px-1.5 py-0.5 rounded border text-[10px] ${r.is_lunas ? "bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200" : "bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200"}`}
+                                    title={r.is_lunas ? "Klik untuk batalkan lunas item" : "Klik untuk lunaskan item"}
+                                  >
+                                    {r.is_lunas ? "Lunas" : "Belum"}
+                                  </button>
+                                ) : (
+                                  <span className={`ml-2 px-1.5 py-0.5 rounded border text-[10px] ${r.is_lunas ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-yellow-100 text-yellow-700 border-yellow-300"}`}>
+                                    {r.is_lunas ? "Lunas" : "Belum"}
+                                  </span>
+                                )}
                                 {r.keterangan ? (
                                   <span className="block text-gray-600 mt-0.5">{r.keterangan}</span>
                                 ) : null}
