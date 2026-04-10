@@ -21,6 +21,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\BASTController;
 use App\Http\Controllers\BAUFController;
 use App\Http\Controllers\BAMController;
+use App\Http\Controllers\DashboardBiayaController;
 use App\Http\Controllers\SPPDController;
 
 
@@ -290,6 +291,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
         'destroy'
     ]);
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | BIAYA DASHBOARD (DI LUAR PROJEK)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/dashboard-biaya', [DashboardBiayaController::class, 'index']);
+    Route::get('/dashboard-biaya/summary', [DashboardBiayaController::class, 'summary']);
+    Route::post('/dashboard-biaya', [DashboardBiayaController::class, 'store']);
+    Route::patch('/dashboard-biaya/{id}', [DashboardBiayaController::class, 'update']);
+    Route::delete('/dashboard-biaya/{id}', [DashboardBiayaController::class, 'destroy']);
 
     /*
     |--------------------------------------------------------------------------

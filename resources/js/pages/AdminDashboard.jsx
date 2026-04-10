@@ -61,6 +61,7 @@ import LogistikEditBarangPage from "./LogistikEditBarangPage";
 
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
+import BiayaDashboardPanel from "../components/BiayaDashboardPanel";
 
 export default function AdminDashboard({ user, logout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -238,6 +239,9 @@ export default function AdminDashboard({ user, logout }) {
                       isMobile={isMobile}
                     />
                   </div>
+
+                  {/* ================= SUMMARY ================= */}
+                  <BiayaDashboardPanel user={currentUser} />
 
                   {/* ================= SUMMARY ================= */}
                   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 mb-6 sm:mb-8 md:mb-10">

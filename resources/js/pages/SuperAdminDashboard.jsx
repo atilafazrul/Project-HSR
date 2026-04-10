@@ -31,6 +31,7 @@ import axios from "../api/axiosConfig";
 import Profile from "./Profile.jsx";
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
+import BiayaDashboardPanel from "../components/BiayaDashboardPanel";
 
 import ITPage from "./ITPage";
 import InventoryPage from "./InventoryPage";
@@ -414,6 +415,9 @@ const Dashboard = ({ user, windowWidth }) => {
           />
         </div>
       </div>
+
+      {/* SUMMARY */}
+      <BiayaDashboardPanel user={user} />
 
       {/* SUMMARY */}
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-md p-4 sm:p-5 md:p-6 lg:p-8 mb-4 sm:mb-5 md:mb-6 lg:mb-8 xl:mb-12">
