@@ -21,6 +21,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\BASTController;
 use App\Http\Controllers\BAUFController;
 use App\Http\Controllers\BAMController;
+use App\Http\Controllers\SPPDController;
 
 
 /*
@@ -520,6 +521,52 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::delete('/bam/{id}', [
         BAMController::class,
+        'destroy'
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | SPPD PDF
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/sppd/next-nomor', [
+        SPPDController::class,
+        'getNextNomorSurat'
+    ]);
+
+    Route::get('/sppd/history', [
+        SPPDController::class,
+        'getHistory'
+    ]);
+
+    Route::post('/sppd', [
+        SPPDController::class,
+        'store'
+    ]);
+
+    Route::get('/sppd/{id}', [
+        SPPDController::class,
+        'show'
+    ]);
+
+    Route::put('/sppd/{id}', [
+        SPPDController::class,
+        'update'
+    ]);
+
+    Route::post('/sppd/pdf', [
+        SPPDController::class,
+        'generatePDF'
+    ]);
+
+    Route::get('/sppd/{id}/pdf', [
+        SPPDController::class,
+        'regeneratePDF'
+    ]);
+
+    Route::delete('/sppd/{id}', [
+        SPPDController::class,
         'destroy'
     ]);
 

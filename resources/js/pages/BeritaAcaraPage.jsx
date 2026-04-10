@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, ClipboardCheck, Wrench } from "lucide-react";
+import { FileText, ClipboardCheck, Wrench, FileSignature } from "lucide-react";
 
 export default function BeritaAcaraPage() {
   const navigate = useNavigate();
@@ -50,6 +50,14 @@ export default function BeritaAcaraPage() {
           title="BAST"
           subtitle="Berita Acara Serah Terima"
           onClick={() => navigate(`${basePath}/berita-acara/bast`)}
+        />
+
+        {/* SPPD */}
+        <Card
+          icon={<FileSignature size={30} className="text-orange-600" />}
+          title="SPPD"
+          subtitle="Surat Perintah Perjalanan Dinas"
+          onClick={() => navigate(`${basePath}/berita-acara/sppd`)}
         />
       </div>
     </div>
